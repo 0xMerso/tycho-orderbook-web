@@ -1,6 +1,6 @@
 use axum::http::HeaderMap;
 use tycho_orderbook::{
-    data::{fmt::SrzProtocolComponent},
+    data::fmt::SrzProtocolComponent,
     types::{Network, Orderbook},
     utils::r#static::data::keys,
 };

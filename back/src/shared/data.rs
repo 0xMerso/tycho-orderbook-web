@@ -13,13 +13,6 @@ use redis::{
 
 use crate::types::StreamState;
 
-/// ================ Naming Convention ================
-/// ALL             : <network>                            : One struct for eveything related to a network
-/// NetworkConfig   : <network>.config                     : The network configuration
-/// ALL ActiveUser  : <network>:<protocol>:cdps            : ActiveUser per network AND per protocol
-/// OracLe Snap     : <network>:<protocol>:prices          : One Oracle snapshot at a block, for each reserve
-/// One ActiveUser  : <network>:<protocol>:cdps:<useraddr> : One ActiveUser
-
 pub async fn ping() {
     let co = connect().await;
     match co {

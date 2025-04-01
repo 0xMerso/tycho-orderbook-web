@@ -13,9 +13,7 @@ use shared::{
 };
 use tycho_orderbook::{
     core::{book, exec},
-    data::{
-        fmt::{SrzProtocolComponent, SrzToken},
-    },
+    data::fmt::{SrzProtocolComponent, SrzToken},
     maths,
     types::{EnvConfig, ExecutionPayload, ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, SharedTychoStreamState},
     utils::{misc::current_timestamp, r#static::data::keys},
@@ -52,8 +50,6 @@ use utoipa_swagger_ui::SwaggerUi;
 )]
 struct APIDoc;
 
-/// ===== API Helpers =====
-
 pub fn wrap<T: serde::Serialize>(data: Option<T>, error: Option<String>) -> impl IntoResponse {
     match error {
         Some(err) => {
@@ -76,8 +72,6 @@ pub fn wrap<T: serde::Serialize>(data: Option<T>, error: Option<String>) -> impl
         }
     }
 }
-
-/// ===== API Helpers =====
 
 // GET / => "Hello, Tycho!"
 async fn root() -> impl IntoResponse {

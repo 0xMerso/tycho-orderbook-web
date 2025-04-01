@@ -46,3 +46,6 @@ start
 
 # --- Website (limited orderbooks) ---
 # https://tycho-orderbook.vercel.app
+
+# --- Cleanup ---
+# cargo clippy --fix --allow-dirty --allow-staged --workspace --all-targets --all-features
