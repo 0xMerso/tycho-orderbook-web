@@ -3,7 +3,7 @@
 import * as echarts from 'echarts'
 import { ErrorBoundary } from 'react-error-boundary'
 import { Suspense, useEffect, useState } from 'react'
-import { OrderbookAreaColor, OrderbookSide } from '@/enums'
+import { OrderbookOption, OrderbookSide } from '@/enums'
 import EchartWrapper from './EchartWrapper'
 import { ChartBackground, CustomFallback, LoadingArea } from './ChartsCommons'
 import { useAppStore } from '@/stores/app.store'
@@ -53,7 +53,8 @@ const getOptions = (
     asks: LineDataPoint[],
     yAxisType: 'value' | 'log',
     yAxisLogBase: number,
-    coloredAreas: OrderbookAreaColor,
+    coloredAreas: OrderbookOption,
+    symbolsInYAxis: OrderbookOption,
 ): echarts.EChartsOption => {
     // const sortedBids = bids.sort((curr, next) => curr.value[0] - next.value[0])
     // const sortedAsks = asks.sort((curr, next) => curr.value[0] - next.value[0])
@@ -64,18 +65,23 @@ const getOptions = (
         tooltip: {
             trigger: 'axis',
             triggerOn: 'mousemove|click',
+            backgroundColor: AppColors.jagger[800],
+            borderRadius: 6,
             axisPointer: {
                 type: 'line',
                 snap: true,
                 lineStyle: {
-                    color: AppColors.milk[600],
+                    color: AppColors.milk.DEFAULT,
                     width: 2,
                     type: 'dotted',
                 },
             },
+            borderColor: 'transparent',
             textStyle: {
-                fontSize: 11,
+                fontSize: 12,
+                color: AppColors.milk.DEFAULT,
             },
+            extraCssText: 'backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);',
             formatter: (params) => {
                 const [firstSerieDataPoints] = Array.isArray(params) ? params : [params]
 
@@ -91,21 +97,25 @@ const getOptions = (
                     const protocolName = orderbook.pools[percentIndex]?.protocol_system ?? 'Unknown'
                     const attributes = orderbook.pools[percentIndex]?.static_attributes ?? []
                     const hexaPercent = attributes.find((entry) => entry[0].toLowerCase() === 'fee')?.[1] ?? '0'
-                    return `- ${numeral(percent / 100).format('#4#0,0%')} in ${protocolName} ${numeral(parseInt(hexaPercent, 16)).divide(100).format('0,0.[0]')}bps`
+                    const usagePercent = numeral(percent / 100).format('0,0%')
+                    const isPoolUsed = usagePercent !== '0%'
+                    const poolBps = numeral(parseInt(hexaPercent, 16)).divide(100).format('0,0.[0]')
+                    return `<span style="color:${isPoolUsed ? AppColors.milk[600] : AppColors.milk[200]}">- ${usagePercent} in ${protocolName} ${poolBps}bps</span>`
+                    // return `<span>- ${numeral(percent / 100).format('0,0%')} in ${protocolName} ${numeral(parseInt(hexaPercent, 16)).divide(100).format('0,0.[0]')}bps</span>`
                 })
 
                 return [
-                    `<strong>You sell</strong>`,
-                    `= ${numeral(input).format('0,0.[0000000]')} ${side === OrderbookSide.BID ? orderbook.base.symbol : orderbook.quote.symbol}`,
-                    ``,
-                    `<strong>Simulated price</strong>`,
-                    `= ${numeral(price).format('0,0.[0000000]')} ${orderbook.quote.symbol} for 1 ${orderbook.base.symbol}`,
-                    `= ${numeral(1 / price).format('0,0.[0000000]')} ${orderbook.base.symbol} for 1 ${orderbook.quote.symbol}`,
-                    ``,
-                    `<strong>You buy</strong>`,
-                    `= ${numeral(output).format('0,0.[0000000]')} ${side === OrderbookSide.BID ? orderbook.quote.symbol : orderbook.base.symbol}`,
-                    ``,
-                    `<strong>Distribution</strong>`,
+                    `<strong>You sell</strong> (${side === OrderbookSide.BID ? 'left' : 'right'} Y axis)`,
+                    `${numeral(input).format('0,0.[00000]')} ${side === OrderbookSide.BID ? orderbook.base.symbol : orderbook.quote.symbol}`,
+                    // -
+                    `<br/><strong>At price</strong> (X axis)`,
+                    `1 ${orderbook.base.symbol} = ${numeral(price).format('0,0.[00000]')} ${orderbook.quote.symbol}`,
+                    `1 ${orderbook.quote.symbol} = ${numeral(1 / price).format('0,0.[00000]')} ${orderbook.base.symbol}`,
+                    // -
+                    `<br/><strong>To buy</strong>`,
+                    `${numeral(output).format('0,0.[00000]')} ${side === OrderbookSide.BID ? orderbook.quote.symbol : orderbook.base.symbol}`,
+                    // -
+                    `<br/><strong>Distribution</strong>`,
                     ...distributionLines,
                 ]
                     .filter(Boolean)
@@ -154,6 +164,25 @@ const getOptions = (
             },
             min: 'dataMin',
             max: 'dataMax',
+            axisPointer: {
+                show: true,
+                label: {
+                    show: true,
+                    padding: [6, 10],
+                    fontSize: 11,
+                    borderRadius: 4,
+                    formatter: (param) => {
+                        const value = Number(param.value)
+                        return [
+                            `1 ${orderbook.base.symbol} = ${formatAmount(value)} ${orderbook.quote.symbol}`,
+                            `1 ${orderbook.quote.symbol} = ${formatAmount(1 / value)} ${orderbook.base.symbol}`,
+                        ].join('\n')
+                    },
+                    backgroundColor: AppColors.jagger[800],
+                    color: AppColors.milk.DEFAULT,
+                    borderColor: 'transparent',
+                },
+            },
         },
 
         // interesting: https://stackoverflow.com/questions/67622021/getting-values-instead-of-percentages-of-datazoom-in-apache-echarts
@@ -212,8 +241,8 @@ const getOptions = (
                     fontSize: 11,
                     show: true,
                     color: AppColors.milk[200],
-                    // formatter: (value) => `${formatAmount(value)}`,
-                    formatter: (value) => `${formatAmount(value)} ${orderbook.base.symbol}`,
+                    formatter: (value) =>
+                        symbolsInYAxis === OrderbookOption.YES ? `${formatAmount(value)} ${orderbook.base.symbol}` : `${formatAmount(value)}`,
                 },
                 axisLine: {
                     show: false,
@@ -246,8 +275,8 @@ const getOptions = (
                     fontSize: 11,
                     show: true,
                     color: AppColors.milk[200],
-                    // formatter: (value) => String(formatAmount(value)),
-                    formatter: (value) => `${formatAmount(value)} ${orderbook.quote.symbol}`,
+                    formatter: (value) =>
+                        symbolsInYAxis === OrderbookOption.YES ? `${formatAmount(value)} ${orderbook.quote.symbol}` : `${formatAmount(value)}`,
                 },
                 axisLine: {
                     show: false,
@@ -291,7 +320,7 @@ const getOptions = (
                     itemStyle: { color: AppColors.aquamarine, borderWidth: 4 },
                 },
                 areaStyle:
-                    coloredAreas === OrderbookAreaColor.NO
+                    coloredAreas === OrderbookOption.NO
                         ? undefined
                         : {
                               opacity: 0.3,
@@ -327,7 +356,7 @@ const getOptions = (
                     itemStyle: { color: AppColors.folly, borderWidth: 4 },
                 },
                 areaStyle:
-                    coloredAreas === OrderbookAreaColor.NO
+                    coloredAreas === OrderbookOption.NO
                         ? undefined
                         : {
                               opacity: 0.3,
@@ -349,7 +378,7 @@ const getOptions = (
 }
 
 export default function DepthChart() {
-    const { buyToken, sellToken, storeRefreshedAt, yAxisType, yAxisLogBase, coloredAreas, selectOrderbookDataPoint } = useAppStore()
+    const { buyToken, sellToken, storeRefreshedAt, yAxisType, yAxisLogBase, coloredAreas, symbolsInYAxis, selectOrderbookDataPoint } = useAppStore()
     const { apiStoreRefreshedAt, getOrderbook } = useApiStore()
     const [options, setOptions] = useState<null | echarts.EChartsOption>(null)
 
@@ -432,7 +461,7 @@ export default function DepthChart() {
             // console.log('asks.length', asks.length, 'lowestAsk', 1 / lowestAsk.average_sell_price)
 
             // options
-            const newOptions = getOptions(orderbook, bids, asks, yAxisType, yAxisLogBase, coloredAreas)
+            const newOptions = getOptions(orderbook, bids, asks, yAxisType, yAxisLogBase, coloredAreas, symbolsInYAxis)
 
             // update
             setOptions(newOptions)
@@ -441,7 +470,7 @@ export default function DepthChart() {
         }
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sellToken?.address, buyToken?.address, apiStoreRefreshedAt, yAxisType, yAxisLogBase, coloredAreas])
+    }, [sellToken?.address, buyToken?.address, apiStoreRefreshedAt, yAxisType, yAxisLogBase, coloredAreas, symbolsInYAxis])
 
     // methods
     const handlePointClick = (params: { value: undefined | OrderbookDataPoint }) => {

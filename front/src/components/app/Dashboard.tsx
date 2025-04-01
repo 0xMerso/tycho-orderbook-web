@@ -1,6 +1,6 @@
 'use client'
 
-import { IconIds, OrderbookAreaColor, OrderbookAxisScale } from '@/enums'
+import { IconIds, OrderbookOption, OrderbookAxisScale } from '@/enums'
 import numeral from 'numeral'
 import { useAppStore } from '@/stores/app.store'
 import { ReactNode, useEffect, useRef, useState } from 'react'
@@ -39,16 +39,22 @@ export default function Dashboard() {
         sellTokenAmountInput,
         buyToken,
         // buyTokenAmountInput,
+
+        // options
         yAxisType,
         yAxisLogBase,
+        setYAxisType,
         coloredAreas,
         setColoredAreas,
+        symbolsInYAxis,
+        setSymbolsInYAxis,
+
+        // -
         switchSelectedTokens,
         setShowSelectTokenModal,
         setSelectTokenModalFor,
         setSellTokenAmountInput,
         // setBuyTokenAmountInput,
-        setYAxisType,
     } = useAppStore()
     const { orderBookRefreshIntervalMs, setApiTokens, setApiOrderbook, setApiStoreRefreshedAt, getOrderbook } = useApiStore()
     const [openChartOptions, showChartOptions] = useState(false)
@@ -74,6 +80,7 @@ export default function Dashboard() {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_, ApiOrderbookQuery] = useQueries({
         queries: [
+            // todo status query to update when the api is ready
             {
                 queryKey: ['ApiTokensQuery'],
                 enabled: true,
@@ -222,7 +229,7 @@ export default function Dashboard() {
                         <OrderbookComponentLayout
                             title={
                                 <div className="w-full flex items-start gap-1 group">
-                                    <p className="text-milk-600 text-xs">Best bid 1 ${sellToken.symbol}</p>
+                                    <p className="text-milk-600 text-xs">Best bid</p>
                                     <IconWrapper icon={IconIds.INFORMATION} className="size-3.5 text-milk-200 group-hover:text-milk cursor-pointer" />
                                 </div>
                             }
@@ -251,8 +258,13 @@ export default function Dashboard() {
 
                     {/* mid price */}
                     {!metrics.showOrderbookPlaceholders && sellToken?.symbol && buyToken?.symbol && metrics.midPrice ? (
-                        <OrderbookKeyMetric
-                            title={`Mid-price 1 ${sellToken.symbol}`}
+                        <OrderbookComponentLayout
+                            title={
+                                <div className="w-full flex items-start gap-1 group">
+                                    <p className="text-milk-600 text-xs">Mid-price</p>
+                                    <IconWrapper icon={IconIds.INFORMATION} className="size-3.5 text-milk-200 group-hover:text-milk cursor-pointer" />
+                                </div>
+                            }
                             content={
                                 <div className="flex gap-1.5 items-center flex-wrap">
                                     <TokenImage size={20} token={buyToken} />
@@ -273,9 +285,13 @@ export default function Dashboard() {
 
                     {/* ask */}
                     {!metrics.showOrderbookPlaceholders && sellToken?.symbol && buyToken?.symbol && metrics.lowestAsk ? (
-                        <OrderbookKeyMetric
-                            // title="Best ask"
-                            title={`Best ask 1 ${sellToken.symbol}`}
+                        <OrderbookComponentLayout
+                            title={
+                                <div className="w-full flex items-start gap-1 group">
+                                    <p className="text-milk-600 text-xs">Best ask</p>
+                                    <IconWrapper icon={IconIds.INFORMATION} className="size-3.5 text-milk-200 group-hover:text-milk cursor-pointer" />
+                                </div>
+                            }
                             content={
                                 <div className="flex gap-1.5 items-center flex-wrap">
                                     <TokenImage size={20} token={buyToken} />
@@ -308,7 +324,7 @@ export default function Dashboard() {
                                     {numeral(
                                         (1 / metrics.lowestAsk.average_sell_price - metrics.highestBid.average_sell_price) / metrics.midPrice,
                                     ).format('0,0.[0000]%')}{' '}
-                                    <span className="pl-1 text-milk-150 text-xs">
+                                    <span className="pl-1 text-milk-400 text-xs">
                                         {numeral(
                                             (1 / metrics.lowestAsk.average_sell_price - metrics.highestBid.average_sell_price) / metrics.midPrice,
                                         )
@@ -340,7 +356,11 @@ export default function Dashboard() {
                                 </div>
                             }
                             content={
-                                <LinkWrapper href={`https://etherscan.io/block/${metrics.orderbook.block}`} className="flex gap-1 items-center group">
+                                <LinkWrapper
+                                    target="_blank"
+                                    href={`https://etherscan.io/block/${metrics.orderbook.block}`}
+                                    className="flex gap-1 items-center group"
+                                >
                                     <p className="text-milk font-bold text-base">{numeral(metrics.orderbook.block).format('0,0')}</p>
                                     <IconWrapper icon={IconIds.OPEN_LINK_IN_NEW_TAB} className="size-4 text-milk-200 group-hover:text-milk" />
                                 </LinkWrapper>
@@ -403,41 +423,71 @@ export default function Dashboard() {
                                         },
                                     )}
                                 >
-                                    {/* y axis scale */}
+                                    {/* option */}
                                     <div className="flex flex-col w-full items-start gap-0.5">
                                         <p className="text-milk-400 text-sm font-bold">Y Axis scale</p>
-                                        {[OrderbookAxisScale.VALUE, OrderbookAxisScale.LOG].map((type, typeIndex) => (
-                                            <div
-                                                key={`${type}-${typeIndex}`}
-                                                className={cn('flex items-center gap-2 w-full px-4 py-1.5 rounded-lg transition', {
-                                                    'text-white bg-gray-600/20': yAxisType === type,
-                                                    'text-milk-400 hover:bg-gray-600/20': yAxisType !== type,
-                                                })}
-                                                onClick={() => setYAxisType(type)}
-                                            >
-                                                <p className="text-sm">{type === OrderbookAxisScale.VALUE ? 'Linear' : `Log ${yAxisLogBase}`}</p>
-                                            </div>
-                                        ))}
+                                        <div className="grid grid-cols-2 w-full">
+                                            {[OrderbookAxisScale.VALUE, OrderbookAxisScale.LOG].map((type, typeIndex) => (
+                                                <div
+                                                    key={`${type}-${typeIndex}`}
+                                                    className={cn('flex items-center gap-2 w-full px-4 py-1.5 rounded-lg transition', {
+                                                        'text-white bg-gray-600/20': yAxisType === type,
+                                                        'text-milk-400 hover:bg-gray-600/20': yAxisType !== type,
+                                                    })}
+                                                    onClick={() => setYAxisType(type)}
+                                                >
+                                                    <p className="text-sm mx-auto">
+                                                        {type === OrderbookAxisScale.VALUE ? 'Linear' : `Log ${yAxisLogBase}`}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
 
+                                    {/* option */}
                                     <div className="flex flex-col w-full items-start gap-0.5">
                                         <p className="text-milk-400 text-sm font-bold">Colored areas</p>
-                                        {[OrderbookAreaColor.YES, OrderbookAreaColor.NO].map((option, optionIndex) => (
-                                            <div
-                                                key={`${option}-${optionIndex}`}
-                                                className={cn('flex items-center gap-2 w-full px-4 py-1.5 rounded-lg transition', {
-                                                    'text-white bg-gray-600/20': coloredAreas === option,
-                                                    'text-milk-400 hover:bg-gray-600/20': coloredAreas !== option,
-                                                })}
-                                                onClick={() =>
-                                                    setColoredAreas(
-                                                        coloredAreas === OrderbookAreaColor.YES ? OrderbookAreaColor.NO : OrderbookAreaColor.YES,
-                                                    )
-                                                }
-                                            >
-                                                <p className="text-sm">{option}</p>
-                                            </div>
-                                        ))}
+                                        <div className="grid grid-cols-2 w-full">
+                                            {[OrderbookOption.YES, OrderbookOption.NO].map((option, optionIndex) => (
+                                                <div
+                                                    key={`${option}-${optionIndex}`}
+                                                    className={cn('flex items-center gap-2 w-full px-4 py-1.5 rounded-lg transition', {
+                                                        'text-white bg-gray-600/20': coloredAreas === option,
+                                                        'text-milk-400 hover:bg-gray-600/20': coloredAreas !== option,
+                                                    })}
+                                                    onClick={() =>
+                                                        setColoredAreas(
+                                                            coloredAreas === OrderbookOption.YES ? OrderbookOption.NO : OrderbookOption.YES,
+                                                        )
+                                                    }
+                                                >
+                                                    <p className="text-sm mx-auto">{option}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* titles */}
+                                    <div className="flex flex-col w-full items-start gap-0.5">
+                                        <p className="text-milk-400 text-sm font-bold">Symbols in Y axis labels</p>
+                                        <div className="grid grid-cols-2 w-full">
+                                            {[OrderbookOption.YES, OrderbookOption.NO].map((option, optionIndex) => (
+                                                <div
+                                                    key={`${option}-${optionIndex}`}
+                                                    className={cn('flex items-center gap-2 w-full px-4 py-1.5 rounded-lg transition', {
+                                                        'text-white bg-gray-600/20': symbolsInYAxis === option,
+                                                        'text-milk-400 hover:bg-gray-600/20': symbolsInYAxis !== option,
+                                                    })}
+                                                    onClick={() =>
+                                                        setSymbolsInYAxis(
+                                                            symbolsInYAxis === OrderbookOption.YES ? OrderbookOption.NO : OrderbookOption.YES,
+                                                        )
+                                                    }
+                                                >
+                                                    <p className="text-sm mx-auto">{option}</p>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             </button>

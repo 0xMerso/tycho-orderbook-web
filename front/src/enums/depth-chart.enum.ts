@@ -8,7 +8,7 @@ export enum OrderbookAxisScale {
     LOG = 'log',
 }
 
-export enum OrderbookAreaColor {
+export enum OrderbookOption {
     YES = 'Yes',
     NO = 'No',
 }

@@ -14,7 +14,7 @@ export async function GET() {
         // run req
         const fetchResponse = await fetch(url, {
             method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', [`${process.env.API_HEADER_KEY}`]: `${process.env.API_HEADER_VALUE}` },
             signal: controller.signal,
             cache: 'no-store',
         })

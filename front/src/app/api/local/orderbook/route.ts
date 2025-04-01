@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
         // run req
         const fetchResponse = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', [`${process.env.API_HEADER_KEY}`]: `${process.env.API_HEADER_VALUE}` },
             signal: controller.signal,
             cache: 'no-store',
             body: JSON.stringify(body),

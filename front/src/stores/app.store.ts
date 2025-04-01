@@ -4,7 +4,7 @@ import { APP_METADATA, IS_DEV } from '@/config/app.config'
 import { OrderbookDataPoint } from '@/types'
 import { AmmAsOrderbook, AmmPool, Token } from '@/interfaces'
 import { hardcodedTokensList } from '@/data/back-tokens'
-import { OrderbookAreaColor, OrderbookAxisScale } from '@/enums'
+import { OrderbookOption, OrderbookAxisScale } from '@/enums'
 
 export const useAppStore = create<{
     // -
@@ -19,8 +19,10 @@ export const useAppStore = create<{
     yAxisLogBase: number
     setYAxisType: (yAxisType: OrderbookAxisScale) => void
     setYAxisLogBase: (yAxisLogBase: number) => void
-    coloredAreas: OrderbookAreaColor
-    setColoredAreas: (coloredAreas: OrderbookAreaColor) => void
+    coloredAreas: OrderbookOption
+    setColoredAreas: (coloredAreas: OrderbookOption) => void
+    symbolsInYAxis: OrderbookOption
+    setSymbolsInYAxis: (symbolsInYAxis: OrderbookOption) => void
 
     // -
     availablePairs: string[]
@@ -63,8 +65,10 @@ export const useAppStore = create<{
             yAxisLogBase: 10,
             setYAxisLogBase: (yAxisLogBase) => set(() => ({ yAxisLogBase })),
             setAvailablePairs: (availablePairs) => set(() => ({ availablePairs })),
-            coloredAreas: OrderbookAreaColor.NO,
+            coloredAreas: OrderbookOption.NO,
             setColoredAreas: (coloredAreas) => set(() => ({ coloredAreas })),
+            symbolsInYAxis: OrderbookOption.NO,
+            setSymbolsInYAxis: (symbolsInYAxis) => set(() => ({ symbolsInYAxis })),
 
             // -
             availablePairs: [],
