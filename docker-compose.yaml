@@ -40,9 +40,7 @@ services:
       - REDIS_HOST=redis
       - NETWORK=ethereum
       - TESTING=true
-      - TYCHO_URL=https://tycho-beta.propellerheads.xyz
       - TYCHO_API_KEY=sampletoken
-      - HEARTBEAT=ToDo
     restart: always
     networks:
       - tycho

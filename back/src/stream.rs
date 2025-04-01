@@ -30,7 +30,13 @@ pub mod axum;
 async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig) {
     tracing::debug!(" 1️⃣  Launching ProtocolStreamBuilder task for {}", network.name);
     let (_, _, chain) = types::chain(network.name.clone()).expect("Invalid chain");
-    let tokens = rpc::tokens(&network, &config).await.unwrap();
+    let tokens = match rpc::tokens(&network, &config).await {
+        Some(t) => t,
+        None => {
+            tracing::error!("Failed to get tokens. Retrying.");
+            return;
+        }
+    };
     let mut hmt = HashMap::new();
     tokens.iter().for_each(|t| {
         hmt.insert(t.address.clone(), t.clone());
@@ -41,8 +47,9 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
         let key = keys::stream::tokens(network.name.clone());
         shared::data::set(key.as_str(), srztokens.clone()).await;
         tracing::debug!("Connecting to >>> ProtocolStreamBuilder <<< at {} on {:?} ...\n", network.tycho, chain);
-        let filter = ComponentFilter::with_tvl_range(REMOVE_TVL_THRESHOLD, ADD_TVL_THRESHOLD);
-        let builder_config = OrderbookBuilderConfig { filter };
+        let builder_config = OrderbookBuilderConfig {
+            filter: ComponentFilter::with_tvl_range(REMOVE_TVL_THRESHOLD, ADD_TVL_THRESHOLD),
+        };
         let builder = OrderbookBuilder::new(network.clone(), config.clone(), builder_config.clone(), Some(tokens.clone())).await;
         match builder.psb.build().await {
             Ok(mut stream) => {
@@ -177,7 +184,7 @@ async fn main() {
     let filter = tracing_subscriber::EnvFilter::from_default_env();
     tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init(); // <--- Set the log level here
     tracing::info!("--- --- --- Launching Tycho Orderbook (stream & API) --- --- ---");
-    dotenv::from_filename(".env.prod").ok(); // Use .env.ex for testing
+    dotenv::from_filename(".env.prod").ok(); // Use .env.ex for testing purposes but use .env.prod with your own API key
     let config = EnvConfig::new();
     tracing::info!("Launching Stream on {} | 🧪 Testing mode: {:?}", config.network, config.testing);
     let networks = tycho_orderbook::utils::r#static::networks();
@@ -210,7 +217,7 @@ async fn main() {
             let config = config.clone();
             let network = network.clone();
             stream(network.clone(), Arc::clone(&writeable), config.clone()).await;
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
         }
     });
     futures::future::pending::<()>().await;
