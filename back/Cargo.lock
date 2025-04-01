@@ -2243,7 +2243,6 @@ dependencies = [
  "hex",
  "hex-literal",
  "indicatif",
- "log",
  "num-bigint",
  "num-traits",
  "primitive-types 0.10.1",
@@ -2255,12 +2254,14 @@ dependencies = [
  "serde_json",
  "tokio",
  "toml",
+ "tracing",
  "tracing-subscriber",
  "tycho-orderbook",
- "tycho-simulation 0.82.1 (git+https://github.com/0xMerso/tycho-simulation.git?branch=protocol-state-pub-fields)",
+ "tycho-simulation",
  "url",
  "utoipa 5.3.1",
  "utoipa-axum",
+ "utoipa-swagger-ui",
 ]
 
 [[package]]
@@ -5656,6 +5657,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "nu-ansi-term"
+version = "0.46.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77a8165726e8236064dbb45459242600304b42a5ea24ee2948e18e023bf7ba84"
+dependencies = [
+ "overload",
+ "winapi",
+]
+
+[[package]]
 name = "num"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5900,6 +5911,12 @@ name = "outref"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a80800c0488c3a21695ea981a54918fbb37abf04f4d0720c453632255e2ff0e"
+
+[[package]]
+name = "overload"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
 name = "p256"
@@ -7108,6 +7125,40 @@ dependencies = [
  "blake2b_simd",
  "constant_time_eq",
  "crossbeam-utils",
+]
+
+[[package]]
+name = "rust-embed"
+version = "8.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b3aba5104622db5c9fc61098de54708feb732e7763d7faa2fa625899f00bf6f"
+dependencies = [
+ "rust-embed-impl",
+ "rust-embed-utils",
+ "walkdir",
+]
+
+[[package]]
+name = "rust-embed-impl"
+version = "8.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f198c73be048d2c5aa8e12f7960ad08443e56fd39cc26336719fdb4ea0ebaae"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "rust-embed-utils",
+ "syn 2.0.100",
+ "walkdir",
+]
+
+[[package]]
+name = "rust-embed-utils"
+version = "8.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a2fcdc9f40c8dc2922842ca9add611ad19f332227fc651d015881ad1552bd9a"
+dependencies = [
+ "sha2",
+ "walkdir",
 ]
 
 [[package]]
@@ -8556,6 +8607,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-log"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee855f1f400bd0e5c02d150ae5de3840039a3f54b025156404e34c23c03f47c3"
+dependencies = [
+ "log",
+ "once_cell",
+ "tracing-core",
+]
+
+[[package]]
 name = "tracing-serde"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8572,14 +8634,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8189decb5ac0fa7bc8b96b7cb9b2701d60d48805aca84a238004d665fcc4008"
 dependencies = [
  "matchers",
+ "nu-ansi-term",
  "once_cell",
  "regex",
  "serde",
  "serde_json",
  "sharded-slab",
+ "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
+ "tracing-log",
  "tracing-serde",
 ]
 
@@ -8778,11 +8843,11 @@ dependencies = [
  "serde_json",
  "tokio",
  "toml",
- "tracing-subscriber",
+ "tracing",
  "tycho-client",
  "tycho-core",
  "tycho-execution",
- "tycho-simulation 0.82.1 (git+https://github.com/0xMerso/TychoSimu.git?branch=protocol-state-pub-fields)",
+ "tycho-simulation",
  "url",
  "utoipa 5.3.1",
  "utoipa-axum",
@@ -8792,42 +8857,6 @@ dependencies = [
 name = "tycho-simulation"
 version = "0.82.1"
 source = "git+https://github.com/0xMerso/tycho-simulation.git?branch=protocol-state-pub-fields#8b09b1fd72a609841662a1dfa9077957a83f1abe"
-dependencies = [
- "alloy 0.5.4",
- "alloy-primitives",
- "alloy-sol-types",
- "chrono",
- "dialoguer 0.10.4",
- "dotenv",
- "foundry-config",
- "foundry-evm",
- "futures 0.3.31",
- "hex",
- "itertools 0.10.5",
- "lazy_static",
- "mini-moka",
- "num-bigint",
- "num-traits",
- "revm",
- "revm-inspectors",
- "serde",
- "serde_json",
- "strum 0.25.0",
- "strum_macros 0.25.3",
- "thiserror 1.0.69",
- "tokio",
- "tokio-stream",
- "tracing",
- "tycho-client",
- "tycho-core",
- "tycho-execution",
- "uuid 1.16.0",
-]
-
-[[package]]
-name = "tycho-simulation"
-version = "0.82.1"
-source = "git+https://github.com/0xMerso/TychoSimu.git?branch=protocol-state-pub-fields#8b09b1fd72a609841662a1dfa9077957a83f1abe"
 dependencies = [
  "alloy 0.5.4",
  "alloy-primitives",
@@ -9064,6 +9093,24 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.100",
+]
+
+[[package]]
+name = "utoipa-swagger-ui"
+version = "9.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "161166ec520c50144922a625d8bc4925cc801b2dda958ab69878527c0e5c5d61"
+dependencies = [
+ "axum 0.8.3",
+ "base64 0.22.1",
+ "mime_guess",
+ "regex",
+ "rust-embed",
+ "serde",
+ "serde_json",
+ "url",
+ "utoipa 5.3.1",
+ "zip",
 ]
 
 [[package]]
@@ -9854,16 +9901,18 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "2.5.0"
+version = "2.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27c03817464f64e23f6f37574b4fdc8cf65925b5bfd2b0f2aedf959791941f88"
+checksum = "fabe6324e908f85a1c52063ce7aa26b68dcb7eb6dbc83a2d148403c9bc3eba50"
 dependencies = [
  "arbitrary",
  "crc32fast",
  "crossbeam-utils",
+ "displaydoc",
  "flate2",
  "indexmap 2.8.0",
  "memchr",
+ "thiserror 2.0.12",
  "zopfli",
 ]
 

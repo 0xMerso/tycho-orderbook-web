@@ -6,6 +6,7 @@ use axum::{
     routing::{get, post},
 };
 use serde_json::json;
+use shared::{getters, helpers::prevalidation};
 use tycho_orderbook::{
     core::{book, exec},
     data::{
@@ -13,14 +14,11 @@ use tycho_orderbook::{
         fmt::{SrzProtocolComponent, SrzToken},
     },
     maths,
-    types::{EnvConfig, ExecutionPayload, ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, Response, SharedTychoStreamState, Status, Version},
+    types::{EnvConfig, ExecutionPayload, ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, Response, SharedTychoStreamState, Status, StreamState, Version},
     utils::{misc::current_timestamp, r#static::data::keys},
 };
-
 use utoipa::OpenApi;
-use utoipa::ToSchema;
-
-// use utoipa_swagger_ui::SwaggerUi;
+use utoipa_swagger_ui::SwaggerUi;
 
 /// OpenAPI documentation for the API.
 #[derive(OpenApi)]
@@ -96,7 +94,7 @@ async fn root() -> impl IntoResponse {
     )
 )]
 async fn version() -> impl IntoResponse {
-    log::info!("👾 API: GET /version");
+    tracing::info!("👾 API: GET /version");
     wrap(Some(Version { version: "0.1.0".into() }), None)
 }
 
@@ -113,25 +111,8 @@ async fn version() -> impl IntoResponse {
     )
 )]
 async fn network(Extension(network): Extension<Network>) -> impl IntoResponse {
-    log::info!("👾 API: GET /network on {} network", network.name);
+    tracing::info!("👾 API: GET /network on {} network", network.name);
     wrap(Some(network.clone()), None)
-}
-
-pub async fn _status(network: Network) -> Option<Status> {
-    let key1 = keys::stream::status(network.name.clone());
-    let key2 = keys::stream::latest(network.name.clone());
-    let key3 = keys::stream::updated(network.name.clone());
-    let status = data::redis::get::<u128>(key1.as_str()).await;
-    let latest = data::redis::get::<u64>(key2.as_str()).await;
-    let updated = data::redis::get::<Vec<String>>(key3.as_str()).await;
-    match (status, latest, updated) {
-        (Some(status), Some(latest), Some(updated)) => Some(Status {
-            status: status.to_string(),
-            latest: latest.to_string(),
-            updated,
-        }),
-        _ => None,
-    }
 }
 
 // GET /status => Get network status + last block synced
@@ -148,16 +129,11 @@ pub async fn _status(network: Network) -> Option<Status> {
     )
 )]
 async fn status(Extension(network): Extension<Network>) -> impl IntoResponse {
-    log::info!("👾 API: GET /status on {} network", network.name);
-    match _status(network.clone()).await {
+    tracing::info!("👾 API: GET /status on {} network", network.name);
+    match getters::status(network.clone()).await {
         Some(data) => wrap(Some(data), None),
         _ => wrap(None, Some("Failed to get status".to_string())),
     }
-}
-
-async fn _tokens(network: Network) -> Option<Vec<SrzToken>> {
-    let key = keys::stream::tokens(network.name.clone());
-    data::redis::get::<Vec<SrzToken>>(key.as_str()).await
 }
 
 // GET /tokens => Get tokens object from Tycho
@@ -174,16 +150,11 @@ async fn _tokens(network: Network) -> Option<Vec<SrzToken>> {
     )
 )]
 async fn tokens(Extension(network): Extension<Network>) -> impl IntoResponse {
-    log::info!("👾 API: GET /tokens on {} network", network.name);
-    match _tokens(network.clone()).await {
+    tracing::info!("👾 API: GET /tokens on {} network", network.name);
+    match getters::tokens(network.clone()).await {
         Some(tokens) => wrap(Some(tokens), None),
         _ => wrap(None, Some("Failed to get tokens".to_string())),
     }
-}
-
-pub async fn _components(network: Network) -> Option<Vec<SrzProtocolComponent>> {
-    let key = keys::stream::components(network.name.clone());
-    data::redis::get::<Vec<SrzProtocolComponent>>(key.as_str()).await
 }
 
 // GET /components => Get all existing components
@@ -200,14 +171,14 @@ pub async fn _components(network: Network) -> Option<Vec<SrzProtocolComponent>> 
     )
 )]
 async fn components(Extension(network): Extension<Network>) -> impl IntoResponse {
-    log::info!("👾 API: GET /components on {} network", network.name);
-    match _components(network).await {
+    tracing::info!("👾 API: GET /components on {} network", network.name);
+    match getters::components(network).await {
         Some(cps) => {
-            log::info!("Returning {} components", cps.len());
+            tracing::debug!("Returning {} components", cps.len());
             wrap(Some(cps), None)
         }
         _ => {
-            log::error!("Failed to get components");
+            tracing::error!("Failed to get components");
             wrap(None, Some("Failed to get components".to_string()))
         }
     }
@@ -226,7 +197,7 @@ async fn components(Extension(network): Extension<Network>) -> impl IntoResponse
     tag = ("API")
 )]
 async fn execute(headers: HeaderMap, Extension(network): Extension<Network>, Extension(config): Extension<EnvConfig>, AxumExJson(execution): AxumExJson<ExecutionRequest>) -> impl IntoResponse {
-    log::info!("👾 API: Querying execute endpoint: {:?}", execution);
+    tracing::info!("👾 API: Querying execute endpoint: {:?}", execution);
     match exec::swap(network.clone(), execution.clone(), config.clone()).await {
         Ok(result) => wrap(Some(result), None),
         Err(e) => {
@@ -234,59 +205,6 @@ async fn execute(headers: HeaderMap, Extension(network): Extension<Network>, Ext
             wrap(None, Some(error))
         }
     }
-}
-
-/// Verify orderbook cache
-/// If the orderbook is not in the cache, the function will be computed
-/// If the orderbook is in the cache, check
-pub async fn _verify_obcache(network: Network, acps: Vec<SrzProtocolComponent>, tag: String) -> Option<Orderbook> {
-    let key = keys::stream::orderbook(network.name.clone(), tag);
-    match data::redis::get::<Orderbook>(key.as_str()).await {
-        Some(orderbook) => {
-            log::info!("Orderbook found in cache, at block {} and timestamp: {}", orderbook.block, orderbook.timestamp);
-            let pools = orderbook.pools.clone();
-            for previous in pools {
-                if let Some(current) = acps.iter().find(|x| x.id.to_lowercase() == previous.id.to_lowercase()) {
-                    let delta = current.last_updated_at as i64 - previous.last_updated_at as i64;
-                    if delta > 0 {
-                        log::info!("Cp {} outdated (new: {} vs old: {} = delta {})", current.id, current.last_updated_at, previous.last_updated_at, delta);
-                        return None;
-                    }
-                } else {
-                    log::info!("Component {} not found in current components", previous.id);
-                    return None;
-                }
-            }
-            log::info!("Orderbook is up to date");
-            return Some(orderbook);
-        }
-        _ => {
-            log::info!("Couldn't find orderbook in cache");
-        }
-    }
-    None
-}
-
-pub fn validation(headers: &HeaderMap) -> bool {
-    let pwd = "todo";
-    let key = "tycho-orderbook-ui-api-key";
-    match headers.get(key) {
-        Some(value) => {
-            if let Ok(api_key) = value.to_str() {
-                log::info!("Got API key: {}", api_key);
-                return true;
-                // if api_key.to_lowercase() == tmp_pwd {
-                //     return true;
-                // } else {
-                //     log::error!("Invalid API key: {}", api_key);
-                // }
-            }
-        }
-        None => {
-            log::error!("Header not found. Rejecting request");
-        }
-    }
-    true // ! Hardcoded
 }
 
 // POST /orderbook/{0xt0-0xt1} => Simulate the orderbook
@@ -310,25 +228,24 @@ async fn orderbook(
     AxumExJson(params): AxumExJson<OrderbookRequestParams>,
 ) -> impl IntoResponse {
     let single = params.sps.is_some();
-    log::info!("👾 API: OrderbookRequestParams: {:?} | Single point: {}", params, single);
-
-    // if validation(&headers) == false {
-    //     let msg = " 🔺 Invalid orderbook API key for header: 'tycho-orderbook-ui-api-key'";
-    //     log::info!("{}", msg);
-    //     return wrap(None, Some(msg.to_string()));
-    // }
-
-    match (_tokens(network.clone()).await, _components(network.clone()).await) {
+    tracing::info!("👾 API: OrderbookRequestParams: {:?} | Single: {}", params, single);
+    let mtx = shtss.read().await;
+    let initialised = mtx.initialised;
+    drop(mtx);
+    if let Some(e) = prevalidation(network.clone(), headers.clone(), initialised).await {
+        return wrap(None, Some(e));
+    }
+    match (getters::tokens(network.clone()).await, getters::components(network.clone()).await) {
         (Some(atks), Some(acps)) => {
             let target = params.tag.clone();
             let targets = target.split("-").map(|x| x.to_string().to_lowercase()).collect::<Vec<String>>();
             let srzt0 = atks.iter().find(|x| x.address.to_lowercase() == targets[0].clone().to_lowercase());
             let srzt1 = atks.iter().find(|x| x.address.to_lowercase() == targets[1].clone().to_lowercase());
             if srzt0.is_none() {
-                log::error!("Couldn't find tokens[0]: {}", targets[0]);
+                tracing::error!("Couldn't find tokens[0]: {}", targets[0]);
                 return wrap(None, Some("Couldn't find tokens for pair tag given (tokens[0])".to_string()));
             } else if srzt1.is_none() {
-                log::error!("Couldn't find  tokens[1]: {}", targets[1]);
+                tracing::error!("Couldn't find  tokens[1]: {}", targets[1]);
                 return wrap(None, Some("Couldn't find tokens for pair tag given (tokens[1])".to_string()));
             }
             let srzt0 = srzt0.unwrap();
@@ -336,7 +253,7 @@ async fn orderbook(
             let targets = vec![srzt0.clone(), srzt1.clone()];
             let (base_to_eth_path, base_to_eth_comps) = maths::path::routing(acps.clone(), srzt0.address.to_string().to_lowercase(), network.eth.to_lowercase()).unwrap_or_default();
             let (quote_to_eth_path, quote_to_eth_comps) = maths::path::routing(acps.clone(), srzt1.address.to_string().to_lowercase(), network.eth.to_lowercase()).unwrap_or_default();
-            // log::info!("Path from {} to network.ETH is {:?}", srzt0.symbol, base_to_eth_path);
+            // tracing::info!("Path from {} to network.ETH is {:?}", srzt0.symbol, base_to_eth_path);
             if targets.len() == 2 {
                 let mut ptss: Vec<ProtoTychoState> = vec![];
                 let mut to_eth_ptss: Vec<ProtoTychoState> = vec![];
@@ -352,7 +269,7 @@ async fn orderbook(
                                 });
                             }
                             None => {
-                                log::error!("matchcp: couldn't find protosim for component {}", cp.id);
+                                tracing::error!("matchcp: couldn't find protosim for component {}", cp.id);
                             }
                         }
                         drop(mtx);
@@ -367,7 +284,7 @@ async fn orderbook(
                                 });
                             }
                             None => {
-                                log::error!("contains: couldn't find protosim for component {}", cp.id);
+                                tracing::error!("contains: couldn't find protosim for component {}", cp.id);
                             }
                         }
                         drop(mtx);
@@ -379,7 +296,7 @@ async fn orderbook(
                 }
 
                 if !single {
-                    if let Some(cache_obk) = _verify_obcache(network.clone(), acps.clone(), params.tag.clone()).await {
+                    if let Some(cache_obk) = shared::helpers::verify_obcache(network.clone(), acps.clone(), params.tag.clone()).await {
                         return wrap(Some(cache_obk), None);
                     }
                 }
@@ -395,14 +312,14 @@ async fn orderbook(
                             // Save Redis cache
                             let tag = format!("{}-{}", result.base.address.to_lowercase(), result.quote.address.to_lowercase());
                             let key = keys::stream::orderbook(network.name.clone(), tag);
-                            log::info!("Saving orderbook to Redis cache with key: {}", key);
+                            tracing::info!("Saving orderbook to Redis cache with key: {}", key);
                             data::redis::set(key.as_str(), result.clone()).await;
                         }
                         wrap(Some(result), None)
                     }
                     _ => {
                         let msg = format!("Couldn't find the quote path from {} to ETH", srzt0.symbol);
-                        log::error!("{}", msg);
+                        tracing::error!("{}", msg);
                         wrap(None, Some(msg))
                     }
                 }
@@ -411,30 +328,30 @@ async fn orderbook(
                     "Couldn't find the pair of tokens for tag {} - Query param Tag must contain only 2 tokens separated by a dash '-'",
                     target
                 );
-                log::error!("{}", msg);
+                tracing::error!("{}", msg);
                 wrap(None, Some(msg))
             }
         }
         _ => {
             let msg = "Couldn't not read internal components";
-            log::error!("{}", msg);
+            tracing::error!("{}", msg);
             wrap(None, Some(msg.to_string()))
         }
     }
 }
 
 pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvConfig) {
-    log::info!("👾 Launching API for '{}' network | 🧪 Testing mode: {:?} | Port: {}", n.name, config.testing, n.port);
-    // shd::utils::misc::log::logtest();
+    tracing::info!("👾 Launching API for '{}' network | 🧪 Testing mode: {:?} | Port: {}", n.name, config.testing, n.port);
+    // shd::utils::misc::tracing::tracingtest();
     let rstate = shared.read().await;
-    log::info!("Testing SharedTychoStreamState read = {:?} with {:?}", rstate.protosims.keys(), rstate.protosims.values());
-    log::info!(" => rstate.states.keys and rstate.states.values => {:?} with {:?}", rstate.protosims.keys(), rstate.protosims.values());
-    log::info!(
+    tracing::info!("Testing SharedTychoStreamState read = {:?} with {:?}", rstate.protosims.keys(), rstate.protosims.values());
+    tracing::info!(" => rstate.states.keys and rstate.states.values => {:?} with {:?}", rstate.protosims.keys(), rstate.protosims.values());
+    tracing::info!(
         " => rstate.components.keys and rstate.components.values => {:?} with {:?}",
         rstate.components.keys(),
         rstate.components.values()
     );
-    log::info!(" => rstate.initialised => {:?} ", rstate.initialised);
+    tracing::info!(" => rstate.initialised => {:?} ", rstate.initialised);
     drop(rstate);
 
     // Add /api prefix
@@ -452,20 +369,19 @@ pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvConfig
         .layer(Extension(n.clone()))
         .layer(Extension(config.clone())); // EnvConfig
 
-    let app = Router::new().nest("/api", inner);
-    // .merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", APIDoc::openapi()));
+    let app = Router::new().nest("/api", inner).merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", APIDoc::openapi()));
 
     match tokio::net::TcpListener::bind(format!("0.0.0.0:{}", n.port)).await {
         Ok(listener) => match axum::serve(listener, app).await {
             Ok(_) => {
-                log::info!("(Logs never displayed in theory): API for '{}' network is running on port {}", n.name, n.port);
+                tracing::info!("(tracings never displayed in theory): API for '{}' network is running on port {}", n.name, n.port);
             }
             Err(e) => {
-                log::error!("Failed to start API for '{}' network: {}", n.name, e);
+                tracing::error!("Failed to start API for '{}' network: {}", n.name, e);
             }
         },
         Err(e) => {
-            log::error!("Failed to bind to port {}: {}", n.port, e);
+            tracing::error!("Failed to bind to port {}: {}", n.port, e);
         }
     }
 }

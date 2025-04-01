@@ -37,6 +37,9 @@ LOG=${LOG:-false}
 API_URL="http://$API_HOST:$PORT/api"
 echo "Testing API at $API_URL"
 
+HDK="tycho-orderbook-web-api-key"
+HDV="42"
+
 try() {
     local description="$1"
     local url="$2"
@@ -51,7 +54,9 @@ try() {
     if [ "$LOG" = "true" ]; then
         local response
         if [ "$method" = "POST" ]; then
-            response=$(curl -s -w "\n%{http_code}" -X POST "$url" -H "Content-Type: application/json" -d "$body")
+            response=$(
+                curl -s -w "\n%{http_code}" -X POST -H "$HDK: $HDV" "$url" -H "Content-Type: application/json" -d "$body"
+            )
         else
             response=$(curl -s -w "\n%{http_code}" -X GET "$url")
         fi
@@ -62,7 +67,7 @@ try() {
         echo "$response_body" | jq .
     else
         if [ "$method" = "POST" ]; then
-            status=$(curl -o /dev/null -s -X POST "$url" -H "Content-Type: application/json" -d "$body" -w "%{http_code}")
+            status=$(curl -o /dev/null -s -X POST -H "$HDK: $HDV" "$url" -H "Content-Type: application/json" -d "$body" -w "%{http_code}")
         else
             status=$(curl -o /dev/null -s -X GET "$url" -w "%{http_code}")
         fi
@@ -93,7 +98,7 @@ try "GET /components" "$API_URL/components"
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$usdc-$dai"'"}'
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$usdc-$usdt"'"}'
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$wbtc-$dai"'"}'
-try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$wbtc-$usdt"'"}'
+# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$wbtc-$usdt"'"}'
 
 try "POST /orderbook (with sps)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdc"'", "sps": {"input": "'"$eth"'", "amount": 100}}'
 # try "POST /orderbook (with sps)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdc"'", "sps": {"input": "'"$usdc"'", "amount": 1000}}'
