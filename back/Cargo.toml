@@ -1,7 +1,7 @@
 [package]
 name = "back"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 # tycho-execution = { git = "https://github.com/propeller-heads/tycho-execution.git", package = "tycho-execution", features = ["evm"] }
