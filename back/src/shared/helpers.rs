@@ -1,13 +1,14 @@
 use axum::http::HeaderMap;
 use tycho_orderbook::{
-    data::{self, fmt::SrzProtocolComponent},
-    types::{Network, Orderbook, StreamState},
+    data::{fmt::SrzProtocolComponent},
+    types::{Network, Orderbook},
     utils::r#static::data::keys,
 };
 
 use crate::{
     getters,
-    r#static::{HEADER_TYCHO_API_KEY, TMP_HD_VALUE},
+    misc::r#static::{HEADER_TYCHO_API_KEY, TMP_HD_VALUE},
+    types::StreamState,
 };
 
 /// Verify orderbook cache
@@ -15,7 +16,7 @@ use crate::{
 /// If the orderbook is in the cache, check
 pub async fn verify_obcache(network: Network, acps: Vec<SrzProtocolComponent>, tag: String) -> Option<Orderbook> {
     let key = keys::stream::orderbook(network.name.clone(), tag);
-    match data::redis::get::<Orderbook>(key.as_str()).await {
+    match crate::data::get::<Orderbook>(key.as_str()).await {
         Some(orderbook) => {
             tracing::info!("Orderbook found in cache, at block {} and timestamp: {}", orderbook.block, orderbook.timestamp);
             let pools = orderbook.pools.clone();
@@ -67,7 +68,7 @@ pub fn validate_headers(headers: &HeaderMap) -> bool {
 /// Check if the API stream is initialised and running, and if the API key is valid
 pub async fn prevalidation(network: Network, headers: HeaderMap, initialised: bool) -> Option<String> {
     // Check if the API stream is initialised
-    if initialised == false {
+    if !initialised {
         let msg = "API is not yet initialised";
         tracing::warn!("{}", msg);
         return Some(msg.to_string());

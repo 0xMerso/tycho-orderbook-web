@@ -6,15 +6,18 @@ use axum::{
     Extension, Json as AxumJson, Router,
 };
 use serde_json::json;
-use shared::{getters, helpers::prevalidation};
+use shared::{
+    getters,
+    helpers::prevalidation,
+    types::{Response, Status, Version},
+};
 use tycho_orderbook::{
     core::{book, exec},
     data::{
-        self,
         fmt::{SrzProtocolComponent, SrzToken},
     },
     maths,
-    types::{EnvConfig, ExecutionPayload, ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, Response, SharedTychoStreamState, Status, StreamState, Version},
+    types::{EnvConfig, ExecutionPayload, ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, SharedTychoStreamState},
     utils::{misc::current_timestamp, r#static::data::keys},
 };
 use utoipa::OpenApi;
@@ -318,7 +321,7 @@ async fn orderbook(
                             let tag = format!("{}-{}", result.base.address.to_lowercase(), result.quote.address.to_lowercase());
                             let key = keys::stream::orderbook(network.name.clone(), tag);
                             tracing::info!("Saving orderbook to Redis cache with key: {}", key);
-                            data::redis::set(key.as_str(), result.clone()).await;
+                            shared::data::set(key.as_str(), result.clone()).await;
                         }
                         wrap(Some(result), None)
                     }

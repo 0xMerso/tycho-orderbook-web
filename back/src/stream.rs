@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 use shared::getters;
+use shared::types::StreamState;
 use tokio::sync::RwLock;
 use tycho_orderbook::core::rpc;
-use tycho_orderbook::data;
 use tycho_orderbook::data::fmt::SrzProtocolComponent;
 use tycho_orderbook::data::fmt::SrzToken;
 use tycho_orderbook::types;
@@ -14,7 +14,6 @@ use tycho_orderbook::types::Network;
 use tycho_orderbook::types::OrderbookBuilder;
 use tycho_orderbook::types::OrderbookBuilderConfig;
 use tycho_orderbook::types::SharedTychoStreamState;
-use tycho_orderbook::types::StreamState;
 use tycho_orderbook::types::TychoStreamState;
 use tycho_orderbook::utils::misc::current_timestamp;
 use tycho_orderbook::utils::r#static::data::keys;
@@ -22,7 +21,6 @@ use tycho_orderbook::utils::r#static::filter::ADD_TVL_THRESHOLD;
 use tycho_orderbook::utils::r#static::filter::NULL_ADDRESS;
 
 use tracing::Level;
-use tracing_subscriber;
 use tycho_orderbook::utils::r#static::filter::REMOVE_TVL_THRESHOLD;
 use tycho_simulation::tycho_client::feed::component_tracker::ComponentFilter;
 
@@ -41,7 +39,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
     tracing::debug!("Fetched {} tokens from Tycho Client", hmt.len());
     'retry: loop {
         let key = keys::stream::tokens(network.name.clone());
-        data::redis::set(key.as_str(), srztokens.clone()).await;
+        shared::data::set(key.as_str(), srztokens.clone()).await;
         tracing::debug!("Connecting to >>> ProtocolStreamBuilder <<< at {} on {:?} ...\n", network.tycho, chain);
         let filter = ComponentFilter::with_tvl_range(REMOVE_TVL_THRESHOLD, ADD_TVL_THRESHOLD);
         let builder_config = OrderbookBuilderConfig { filter };
@@ -58,13 +56,13 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
                                 msg.new_pairs.len(),
                                 msg.removed_pairs.len()
                             );
-                            data::redis::set(keys::stream::latest(network.name.clone()).as_str(), msg.block_number).await;
+                            shared::data::set(keys::stream::latest(network.name.clone()).as_str(), msg.block_number).await;
                             let mtx = ate.read().await;
                             let initialised = mtx.initialised;
                             drop(mtx);
                             if !initialised {
                                 tracing::info!("First stream (= uninitialised). Writing the entire streamed data into the TychoStreamState shared struct.");
-                                data::redis::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Syncing as u128).await;
+                                shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Syncing as u128).await;
                                 // ===== Update Shared State at first sync only =====
                                 let mut targets = vec![];
                                 for (_id, comp) in msg.new_pairs.iter() {
@@ -90,11 +88,11 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
                                 // ===== Storing ALL components =====
                                 tracing::debug!("Storing {} components", components.len());
                                 let key = keys::stream::components(network.name.clone());
-                                data::redis::set(key.as_str(), components.clone()).await;
+                                shared::data::set(key.as_str(), components.clone()).await;
                                 let key = keys::stream::updated(network.name.clone());
-                                data::redis::set::<Vec<String>>(key.as_str(), vec![]).await;
+                                shared::data::set::<Vec<String>>(key.as_str(), vec![]).await;
                                 // ===== Set StreamState to up and running =====
-                                data::redis::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Running as u128).await;
+                                shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Running as u128).await;
                                 tracing::info!("✅ Proto Stream initialised successfully. StreamState set to 'Running' on {}", network.name.clone());
                             } else {
                                 // ===== Update Shared State =====
@@ -108,7 +106,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
                                         components_to_update.push(x.0.clone().to_lowercase());
                                     }
                                     let key = keys::stream::updated(network.name.clone());
-                                    data::redis::set::<Vec<String>>(key.as_str(), cpids.clone()).await;
+                                    shared::data::set::<Vec<String>>(key.as_str(), cpids.clone()).await;
                                     drop(mtx);
                                 }
 
@@ -139,11 +137,11 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
                                                 }
                                             }
                                             let key = keys::stream::components(network.name.clone());
-                                            data::redis::set(key.as_str(), components.clone()).await;
+                                            shared::data::set(key.as_str(), components.clone()).await;
                                         }
                                         None => {
                                             tracing::error!("Failed to get components. Exiting.");
-                                            data::redis::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Error as u128).await;
+                                            shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Error as u128).await;
                                             continue 'retry;
                                         }
                                     }
@@ -153,7 +151,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
                         }
                         Err(e) => {
                             tracing::info!("🔺 Error: ProtocolStreamBuilder on {}: {:?}. Continuing.", network.name, e);
-                            data::redis::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Error as u128).await;
+                            shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Error as u128).await;
                             // ? --- Set initialised to false --- ?
                             continue;
                         }
@@ -185,9 +183,9 @@ async fn main() {
     let networks = tycho_orderbook::utils::r#static::networks();
     let network = networks.clone().into_iter().find(|x| x.name == config.network).expect("Network not found");
     tracing::info!("Tycho Stream for '{}' network", network.name.clone());
-    data::redis::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Launching as u128).await;
-    data::redis::set(keys::stream::latest(network.name.clone().to_string()).as_str(), 0).await;
-    data::redis::ping().await;
+    shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Launching as u128).await;
+    shared::data::set(keys::stream::latest(network.name.clone().to_string()).as_str(), 0).await;
+    shared::data::ping().await;
     // Shared state
     let stss: SharedTychoStreamState = Arc::new(RwLock::new(TychoStreamState {
         protosims: HashMap::new(),  // Protosims cannot be stored in Redis so we always used shared memory state to access/update them
