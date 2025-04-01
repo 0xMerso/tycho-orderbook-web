@@ -5,7 +5,10 @@ use tycho_orderbook::{
     utils::r#static::data::keys,
 };
 
-use crate::getters;
+use crate::{
+    getters,
+    r#static::{HEADER_TYCHO_API_KEY, TMP_HD_VALUE},
+};
 
 /// Verify orderbook cache
 /// If the orderbook is not in the cache, the function will be computed
@@ -41,13 +44,12 @@ pub async fn verify_obcache(network: Network, acps: Vec<SrzProtocolComponent>, t
 /// Validate headers for POST requests
 /// Used to prevent unauthorized access to the API
 pub fn validate_headers(headers: &HeaderMap) -> bool {
-    let pwd = "42";
-    let key = "tycho-orderbook-web-api-key";
+    let key = HEADER_TYCHO_API_KEY;
     match headers.get(key) {
         Some(value) => {
             if let Ok(api_key) = value.to_str() {
                 tracing::info!("Got API key: {}", api_key);
-                if api_key.to_lowercase() == pwd {
+                if api_key.to_lowercase() == TMP_HD_VALUE {
                     return true;
                 } else {
                     tracing::error!("Invalid API key: {}", api_key);
@@ -87,7 +89,7 @@ pub async fn prevalidation(network: Network, headers: HeaderMap, initialised: bo
     }
     // Check if the API key is valid
     if !validate_headers(&headers) {
-        let msg = " 🔺 Invalid orderbook API key for header: 'tycho-orderbook-ui-api-key'";
+        let msg = "Invalid orderbook API key for header: 'tycho-orderbook-web-api-key'";
         tracing::error!("{}", msg);
         return Some(msg.to_string());
     }

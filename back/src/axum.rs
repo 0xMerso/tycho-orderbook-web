@@ -1,9 +1,9 @@
 use axum::{
-    Extension, Json as AxumJson, Router,
     extract::Json as AxumExJson,
     http::HeaderMap,
     response::IntoResponse,
     routing::{get, post},
+    Extension, Json as AxumJson, Router,
 };
 use serde_json::json;
 use shared::{getters, helpers::prevalidation};
@@ -198,6 +198,11 @@ async fn components(Extension(network): Extension<Network>) -> impl IntoResponse
 )]
 async fn execute(headers: HeaderMap, Extension(network): Extension<Network>, Extension(config): Extension<EnvConfig>, AxumExJson(execution): AxumExJson<ExecutionRequest>) -> impl IntoResponse {
     tracing::info!("👾 API: Querying execute endpoint: {:?}", execution);
+
+    if let Some(e) = prevalidation(network.clone(), headers.clone(), true).await {
+        return wrap(None, Some(e));
+    }
+
     match exec::swap(network.clone(), execution.clone(), config.clone()).await {
         Ok(result) => wrap(Some(result), None),
         Err(e) => {
