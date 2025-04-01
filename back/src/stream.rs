@@ -12,15 +12,19 @@ use tycho_orderbook::types;
 use tycho_orderbook::types::EnvConfig;
 use tycho_orderbook::types::Network;
 use tycho_orderbook::types::OrderbookBuilder;
+use tycho_orderbook::types::OrderbookBuilderConfig;
 use tycho_orderbook::types::SharedTychoStreamState;
 use tycho_orderbook::types::StreamState;
 use tycho_orderbook::types::TychoStreamState;
 use tycho_orderbook::utils::misc::current_timestamp;
 use tycho_orderbook::utils::r#static::data::keys;
+use tycho_orderbook::utils::r#static::filter::ADD_TVL_THRESHOLD;
 use tycho_orderbook::utils::r#static::filter::NULL_ADDRESS;
 
 use tracing::Level;
 use tracing_subscriber;
+use tycho_orderbook::utils::r#static::filter::REMOVE_TVL_THRESHOLD;
+use tycho_simulation::tycho_client::feed::component_tracker::ComponentFilter;
 
 pub mod axum;
 
@@ -39,14 +43,16 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
         let key = keys::stream::tokens(network.name.clone());
         data::redis::set(key.as_str(), srztokens.clone()).await;
         tracing::debug!("Connecting to >>> ProtocolStreamBuilder <<< at {} on {:?} ...\n", network.tycho, chain);
-        let builder = OrderbookBuilder::new(network.clone(), config.clone(), Some(tokens.clone())).await;
+        let filter = ComponentFilter::with_tvl_range(REMOVE_TVL_THRESHOLD, ADD_TVL_THRESHOLD);
+        let builder_config = OrderbookBuilderConfig { filter };
+        let builder = OrderbookBuilder::new(network.clone(), config.clone(), builder_config.clone(), Some(tokens.clone())).await;
         match builder.psb.build().await {
             Ok(mut stream) => {
                 while let Some(msg) = stream.next().await {
                     match msg {
                         Ok(msg) => {
                             tracing::info!(
-                                "🔸 Stream: block # {} with {} state, {} new and {} removed",
+                                "🔸 Stream: block # {} with {} states updates, + {} pairs, - {} pairs",
                                 msg.block_number,
                                 msg.states.len(),
                                 msg.new_pairs.len(),
@@ -156,7 +162,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
             }
             Err(e) => {
                 tracing::warn!(
-                    "Failed to create stream: {:?}. Wait a few minutes. You can try again by restarting the program or with a dedicated API key.",
+                    "Failed to create stream: {:?}. Wait a few minutes. You can try again by changing the Tycho Stream filters, or with a dedicated API key.",
                     e.to_string()
                 );
                 continue 'retry;
@@ -170,7 +176,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
  */
 #[tokio::main]
 async fn main() {
-    let filter = tracing_subscriber::EnvFilter::new("off,tycho_orderbook=trace,stream=info");
+    let filter = tracing_subscriber::EnvFilter::from_default_env();
     tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init(); // <--- Set the log level here
     tracing::info!("--- --- --- Launching Tycho Orderbook (stream & API) --- --- ---");
     dotenv::from_filename(".env.prod").ok(); // Use .env.ex for testing

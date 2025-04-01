@@ -8844,6 +8844,7 @@ dependencies = [
  "tokio",
  "toml",
  "tracing",
+ "tracing-subscriber",
  "tycho-client",
  "tycho-core",
  "tycho-execution",
