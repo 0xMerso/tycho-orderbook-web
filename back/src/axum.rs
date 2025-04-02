@@ -292,7 +292,9 @@ async fn orderbook(
                 }
 
                 if ptss.is_empty() {
-                    return wrap(None, Some("ProtoTychoState: pair requested has 0 associated pools".to_string()));
+                    let tag = format!("{}-{}", srzt0.symbol.to_lowercase(), srzt1.symbol.to_lowercase());
+                    let msg = format!("ProtoTychoState: pair {} requested has 0 associated pools and multi-hop is not enabled yet.", tag);
+                    return wrap(None, Some(msg));
                 }
 
                 if !single {
