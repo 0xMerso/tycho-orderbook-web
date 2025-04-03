@@ -218,12 +218,24 @@ async fn components(Extension(network): Extension<Network>) -> impl IntoResponse
     ),
     tag = ("API")
 )]
-async fn execute(headers: HeaderMap, Extension(network): Extension<Network>, Extension(_config): Extension<EnvConfig>, AxumExJson(execution): AxumExJson<ExecutionRequest>) -> impl IntoResponse {
+async fn execute(
+    headers: HeaderMap,
+    Extension(network): Extension<Network>,
+    Extension(state): Extension<SharedTychoStreamState>,
+    Extension(_config): Extension<EnvConfig>,
+    AxumExJson(execution): AxumExJson<ExecutionRequest>,
+) -> impl IntoResponse {
     tracing::info!("👾 API: Querying execute endpoint: {:?}", execution);
     if let Some(e) = prevalidation(network.clone(), headers.clone(), true).await {
         return wrap(None, Some(e));
     }
-    match exec::build(network.clone(), execution.clone(), vec![], None).await {
+    // Get the original components from the state
+    let mtx = state.read().await;
+    let originals = mtx.components.clone();
+    drop(mtx);
+    let originals = exec::get_original_components(originals, execution.components.clone());
+
+    match exec::build(network.clone(), execution.clone(), originals, None).await {
         Ok(result) => {
             let srz = SrzExecutionPayload {
                 swap: SrzTransactionRequest::from(result.swap.clone()),
