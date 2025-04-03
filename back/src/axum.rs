@@ -218,7 +218,7 @@ async fn components(Extension(network): Extension<Network>) -> impl IntoResponse
     ),
     tag = ("API")
 )]
-async fn execute(headers: HeaderMap, Extension(network): Extension<Network>, Extension(config): Extension<EnvConfig>, AxumExJson(execution): AxumExJson<ExecutionRequest>) -> impl IntoResponse {
+async fn execute(headers: HeaderMap, Extension(network): Extension<Network>, Extension(_config): Extension<EnvConfig>, AxumExJson(execution): AxumExJson<ExecutionRequest>) -> impl IntoResponse {
     tracing::info!("👾 API: Querying execute endpoint: {:?}", execution);
     if let Some(e) = prevalidation(network.clone(), headers.clone(), true).await {
         return wrap(None, Some(e));
@@ -273,11 +273,11 @@ async fn orderbook(
             let srzt0 = atks.iter().find(|x| x.address.to_lowercase() == targets[0].clone().to_lowercase());
             let srzt1 = atks.iter().find(|x| x.address.to_lowercase() == targets[1].clone().to_lowercase());
             if srzt0.is_none() {
-                let msg = format!("Couldn't find tokens[0]: {}", targets[0]);
+                let msg = format!("Couldn't find tokens[0]");
                 tracing::error!("{}", msg.clone());
                 return wrap(None, Some(msg.to_string()));
             } else if srzt1.is_none() {
-                let msg = format!("Couldn't find tokens[1]: {}", targets[1]);
+                let msg = format!("Couldn't find tokens[1]");
                 tracing::error!("{}", msg.clone());
                 return wrap(None, Some(msg.to_string()));
             }

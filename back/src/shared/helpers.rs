@@ -131,7 +131,6 @@ pub fn generate_pair_tags(components: &[SrzProtocolComponent]) -> Vec<PairTag> {
             }
         }
     }
-
     // Optional: sort the pairs by addrbase then addrquote for consistent ordering.
     pairs.sort_by(|a, b| a.addrbase.cmp(&b.addrbase).then(a.addrquote.cmp(&b.addrquote)));
     pairs

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tycho-orderbook = { path = "../../tycho-orderbook" }
+tycho-orderbook = { path = "../../tycho-orderbook-sdk" }
 tycho-simulation = { git = "https://github.com/0xMerso/tycho-simulation.git", branch = "main", features = ["evm"]  }
 utoipa = "5.3.1"
 utoipa-axum = "0.2.0"

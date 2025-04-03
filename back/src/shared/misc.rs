@@ -78,3 +78,22 @@ impl EnvAPIConfig {
         }
     }
 }
+
+pub fn top_pairs() -> Vec<String> {
+    vec![
+        "DAI-WETH".to_string(),
+        "DOGE-WETH".to_string(),
+        "WBTC-WETH".to_string(),
+        "PEPE-WETH".to_string(),
+        "USDC-WETH".to_string(),
+        "AAVE-WETH".to_string(),
+        "UNI-WETH".to_string(),
+        "DAI-USDC".to_string(),
+        "DAI-USDT".to_string(),
+        "AAVE-WETH".to_string(),
+        "LINK-WETH".to_string(),
+        "WBTC-USDC".to_string(),
+        "WBTC-USDT".to_string(),
+        "DAI-FRAX".to_string(),
+    ]
+}
