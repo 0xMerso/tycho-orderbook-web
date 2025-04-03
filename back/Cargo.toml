@@ -5,7 +5,8 @@ edition = "2021"
 
 [dependencies]
 tycho-orderbook = { path = "../../tycho-orderbook-sdk" }
-tycho-simulation = { git = "https://github.com/0xMerso/tycho-simulation.git", branch = "main", features = ["evm"]  }
+tycho-simulation = "0.91.1" # Patched below
+
 utoipa = "5.3.1"
 utoipa-axum = "0.2.0"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }
@@ -43,6 +44,10 @@ rayon = "1.10.0"
 async-trait = "0.1.88"
 tracing = "0.1"
 tracing-subscriber = "0.3"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+[patch.crates-io]
+tycho-simulation = { git = "https://github.com/0xMerso/tycho-simulation.git", branch = "main" }
 
 # ======================================================================================================================================================================================================
 [lib]

@@ -9,7 +9,7 @@ use tycho_orderbook::{
 
 use crate::{
     getters,
-    misc::r#static::{HEADER_TYCHO_API_KEY, TMP_HD_VALUE},
+    misc::r#static::HEADER_TYCHO_API_KEY,
     types::{PairTag, StreamState},
 };
 
@@ -46,16 +46,14 @@ pub async fn verify_obcache(network: Network, acps: Vec<SrzProtocolComponent>, t
 
 /// Validate headers for POST requests
 /// Used to prevent unauthorized access to the API
-pub fn validate_headers(headers: &HeaderMap) -> bool {
+pub fn validate_headers(headers: &HeaderMap, expected: String) -> (bool, String) {
     let key = HEADER_TYCHO_API_KEY;
     match headers.get(key) {
         Some(value) => {
             if let Ok(api_key) = value.to_str() {
                 // tracing::trace!("Got header API key: {}", api_key);
-                if api_key.to_lowercase() == TMP_HD_VALUE {
-                    return true;
-                } else {
-                    tracing::error!("Invalid API key: {}", api_key);
+                if api_key.to_lowercase() == expected {
+                    return (true, "Authorized".to_string());
                 }
             }
         }
@@ -63,12 +61,12 @@ pub fn validate_headers(headers: &HeaderMap) -> bool {
             tracing::error!("Header not found. Rejecting request");
         }
     }
-    false
+    (false, "Invalid headers".to_string())
 }
 
 /// Prevalidation of the API
 /// Check if the API stream is initialised and running, and if the API key is valid
-pub async fn prevalidation(network: Network, headers: HeaderMap, initialised: bool) -> Option<String> {
+pub async fn prevalidation(network: Network, headers: HeaderMap, initialised: bool, expected_api_key: String) -> Option<String> {
     // Check if the API stream is initialised
     if !initialised {
         let msg = "API is not yet initialised";
@@ -91,8 +89,8 @@ pub async fn prevalidation(network: Network, headers: HeaderMap, initialised: bo
         }
     }
     // Check if the API key is valid
-    if !validate_headers(&headers) {
-        let msg = "Invalid orderbook API key for header: 'tycho-orderbook-web-api-key'";
+    let (allowed, msg) = validate_headers(&headers, expected_api_key);
+    if !allowed {
         tracing::error!("{}", msg);
         return Some(msg.to_string());
     }

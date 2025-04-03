@@ -1,21 +1,25 @@
 use axum::{
     extract::Json as AxumExJson,
-    http::HeaderMap,
-    response::IntoResponse,
+    http::{self, HeaderMap},
     routing::{get, post},
     Extension, Json as AxumJson, Router,
 };
+
+use axum::response::IntoResponse;
+
+use http::HeaderValue;
 use serde_json::json;
 use shared::{
     getters,
-    helpers::prevalidation,
-    types::{EnvAPIConfig, PairTag, Response, Status, Version},
+    helpers::{prevalidation, validate_headers},
+    types::{APIResponse, EnvAPIConfig, PairTag, Status, Version},
 };
+use tower_http::cors::{Any, CorsLayer};
 use tycho_orderbook::{
     core::{book, exec},
     data::fmt::{SrzProtocolComponent, SrzToken},
     maths,
-    types::{EnvConfig, ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, SharedTychoStreamState, SrzExecutionPayload, SrzTransactionRequest},
+    types::{ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, SharedTychoStreamState, SrzExecutionPayload, SrzTransactionRequest},
     utils::{misc::current_timestamp, r#static::data::keys},
 };
 use utoipa::OpenApi;
@@ -53,7 +57,7 @@ struct APIDoc;
 pub fn wrap<T: serde::Serialize>(data: Option<T>, error: Option<String>) -> impl IntoResponse {
     match error {
         Some(err) => {
-            let response = Response::<String> {
+            let response = APIResponse::<String> {
                 success: false,
                 error: err.clone(),
                 data: None,
@@ -62,7 +66,7 @@ pub fn wrap<T: serde::Serialize>(data: Option<T>, error: Option<String>) -> impl
             AxumJson(json!(response))
         }
         None => {
-            let response = Response {
+            let response = APIResponse {
                 success: true,
                 error: String::default(),
                 data,
@@ -90,8 +94,12 @@ async fn root() -> impl IntoResponse {
         "API"
     )
 )]
-async fn version() -> impl IntoResponse {
+async fn version(headers: HeaderMap, Extension(config): Extension<EnvAPIConfig>) -> impl IntoResponse {
     tracing::info!("👾 API: GET /version");
+    let (allowed, msg) = validate_headers(&headers, config.web_api_key);
+    if !allowed {
+        return wrap(None, Some(msg));
+    }
     wrap(Some(Version { version: "0.1.0".into() }), None)
 }
 
@@ -107,8 +115,12 @@ async fn version() -> impl IntoResponse {
         "API"
     )
 )]
-async fn network(Extension(network): Extension<Network>) -> impl IntoResponse {
+async fn network(headers: HeaderMap, Extension(network): Extension<Network>, Extension(config): Extension<EnvAPIConfig>) -> impl IntoResponse {
     tracing::info!("👾 API: GET /network on {} network", network.name);
+    let (allowed, msg) = validate_headers(&headers, config.web_api_key);
+    if !allowed {
+        return wrap(None, Some(msg));
+    }
     wrap(Some(network.clone()), None)
 }
 
@@ -125,8 +137,12 @@ async fn network(Extension(network): Extension<Network>) -> impl IntoResponse {
         "API"
     )
 )]
-async fn status(Extension(network): Extension<Network>) -> impl IntoResponse {
+async fn status(headers: HeaderMap, Extension(network): Extension<Network>, Extension(config): Extension<EnvAPIConfig>) -> impl IntoResponse {
     tracing::info!("👾 API: GET /status on {} network", network.name);
+    let (allowed, msg) = validate_headers(&headers, config.web_api_key);
+    if !allowed {
+        return wrap(None, Some(msg));
+    }
     match getters::status(network.clone()).await {
         Some(data) => wrap(Some(data), None),
         _ => wrap(None, Some("Failed to get status".to_string())),
@@ -146,8 +162,12 @@ async fn status(Extension(network): Extension<Network>) -> impl IntoResponse {
         "API"
     )
 )]
-async fn tokens(Extension(network): Extension<Network>) -> impl IntoResponse {
+async fn tokens(headers: HeaderMap, Extension(network): Extension<Network>, Extension(config): Extension<EnvAPIConfig>) -> impl IntoResponse {
     tracing::info!("👾 API: GET /tokens on {} network", network.name);
+    let (allowed, msg) = validate_headers(&headers, config.web_api_key);
+    if !allowed {
+        return wrap(None, Some(msg));
+    }
     match getters::tokens(network.clone()).await {
         Some(tokens) => wrap(Some(tokens), None),
         _ => wrap(None, Some("Failed to get tokens".to_string())),
@@ -167,13 +187,16 @@ async fn tokens(Extension(network): Extension<Network>) -> impl IntoResponse {
         "API"
     )
 )]
-async fn pairs(Extension(network): Extension<Network>) -> impl IntoResponse {
+async fn pairs(headers: HeaderMap, Extension(network): Extension<Network>, Extension(config): Extension<EnvAPIConfig>) -> impl IntoResponse {
     tracing::info!("👾 API: GET /pairs on {} network", network.name);
+    let (allowed, msg) = validate_headers(&headers, config.web_api_key);
+    if !allowed {
+        return wrap(None, Some(msg));
+    }
     match getters::pairs(network).await {
         Some(pairs) => wrap(Some(pairs), None),
         _ => {
             let msg = "Failed to generate pair tags";
-            tracing::error!("{}", msg);
             wrap(None, Some(msg.to_string()))
         }
     }
@@ -192,8 +215,12 @@ async fn pairs(Extension(network): Extension<Network>) -> impl IntoResponse {
         "API"
     )
 )]
-async fn components(Extension(network): Extension<Network>) -> impl IntoResponse {
+async fn components(headers: HeaderMap, Extension(network): Extension<Network>, Extension(config): Extension<EnvAPIConfig>) -> impl IntoResponse {
     tracing::info!("👾 API: GET /components on {} network", network.name);
+    let (allowed, msg) = validate_headers(&headers, config.web_api_key);
+    if !allowed {
+        return wrap(None, Some(msg));
+    }
     match getters::components(network).await {
         Some(cps) => {
             tracing::debug!("Returning {} components", cps.len());
@@ -222,11 +249,11 @@ async fn execute(
     headers: HeaderMap,
     Extension(network): Extension<Network>,
     Extension(state): Extension<SharedTychoStreamState>,
-    Extension(_config): Extension<EnvConfig>,
+    Extension(config): Extension<EnvAPIConfig>,
     AxumExJson(execution): AxumExJson<ExecutionRequest>,
 ) -> impl IntoResponse {
     tracing::info!("👾 API: Querying execute endpoint: {:?}", execution);
-    if let Some(e) = prevalidation(network.clone(), headers.clone(), true).await {
+    if let Some(e) = prevalidation(network.clone(), headers.clone(), true, config.web_api_key).await {
         return wrap(None, Some(e));
     }
     // Get the original components from the state
@@ -268,6 +295,7 @@ async fn orderbook(
     headers: HeaderMap,
     Extension(shtss): Extension<SharedTychoStreamState>,
     Extension(network): Extension<Network>,
+    Extension(config): Extension<EnvAPIConfig>,
     AxumExJson(params): AxumExJson<OrderbookRequestParams>,
 ) -> impl IntoResponse {
     let single = params.point.is_some();
@@ -275,7 +303,7 @@ async fn orderbook(
     let mtx = shtss.read().await;
     let initialised = mtx.initialised;
     drop(mtx);
-    if let Some(e) = prevalidation(network.clone(), headers.clone(), initialised).await {
+    if let Some(e) = prevalidation(network.clone(), headers.clone(), initialised, config.web_api_key).await {
         return wrap(None, Some(e));
     }
     match (getters::tokens(network.clone()).await, getters::components(network.clone()).await) {
@@ -285,11 +313,11 @@ async fn orderbook(
             let srzt0 = atks.iter().find(|x| x.address.to_lowercase() == targets[0].clone().to_lowercase());
             let srzt1 = atks.iter().find(|x| x.address.to_lowercase() == targets[1].clone().to_lowercase());
             if srzt0.is_none() {
-                let msg = format!("Couldn't find tokens[0]");
+                let msg = "Couldn't find tokens[0]".to_string();
                 tracing::error!("{}", msg.clone());
                 return wrap(None, Some(msg.to_string()));
             } else if srzt1.is_none() {
-                let msg = format!("Couldn't find tokens[1]");
+                let msg = "Couldn't find tokens[1]".to_string();
                 tracing::error!("{}", msg.clone());
                 return wrap(None, Some(msg.to_string()));
             }
@@ -401,6 +429,21 @@ pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvAPICon
     tracing::info!(" => rstate.initialised => {:?} ", rstate.initialised);
     drop(rstate);
 
+    let cors = match config.testing {
+        true => {
+            tracing::debug!("Testing mode enabled, CORS disabled");
+            CorsLayer::new().allow_origin(Any).allow_methods([http::Method::GET, http::Method::POST]).allow_headers(Any)
+        }
+        false => {
+            tracing::debug!("Testing mode disabled, CORS enabled on {}", config.origin);
+            CorsLayer::new()
+                // "https://x.vercel.app"
+                .allow_origin(config.origin.parse::<HeaderValue>().unwrap())
+                .allow_methods([http::Method::GET, http::Method::POST])
+                .allow_headers(Any)
+            // .allow_headers([http::header::CONTENT_TYPE])
+        }
+    };
     // Add /api prefix
     let inner = Router::new()
         .route("/", get(root))
@@ -412,10 +455,13 @@ pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvAPICon
         .route("/pairs", get(pairs))
         .route("/orderbook", post(orderbook))
         .route("/execute", post(execute))
-        // Swagger
+        // --- Inner Middleware ---
+        // .layer(from_fn(header_check))
+        // .layer(cors);
+        // --- Swagger ---
         .layer(Extension(shared.clone())) // Shared state
         .layer(Extension(n.clone()))
-        .layer(Extension(config.clone())); // EnvConfig
+        .layer(Extension(config.clone())); // EnvAPIConfig
 
     let app = Router::new().nest("/api", inner).merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", APIDoc::openapi()));
 

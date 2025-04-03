@@ -75,6 +75,8 @@ impl EnvAPIConfig {
             testing: get("TESTING") == "true",
             tycho_api_key: get("TYCHO_API_KEY"),
             network: get("NETWORK"),
+            origin: get("ORIGIN"),
+            web_api_key: get("WEB_API_KEY"),
         }
     }
 }

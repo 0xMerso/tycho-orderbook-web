@@ -185,7 +185,7 @@ async fn main() {
     let filter = tracing_subscriber::EnvFilter::from_default_env();
     tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init(); // <--- Set the log level here
     tracing::info!("--- --- --- Launching Tycho Orderbook (stream & API) --- --- ---");
-    dotenv::from_filename(".env.prod").ok(); // Use .env.ex for testing purposes but use .env.prod with your own API key
+    dotenv::from_filename(".env").ok(); // Use .env.ex for testing purposes
     let config = EnvAPIConfig::new();
     tracing::info!("Launching Stream on {} | 🧪 Testing mode: {:?}", config.network, config.testing);
     let networks = tycho_orderbook::utils::r#static::networks();

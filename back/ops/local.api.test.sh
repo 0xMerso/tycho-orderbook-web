@@ -58,7 +58,7 @@ try() {
                 curl -s -w "\n%{http_code}" -X POST -H "$HDK: $HDV" "$url" -H "Content-Type: application/json" -d "$body"
             )
         else
-            response=$(curl -s -w "\n%{http_code}" -X GET "$url")
+            response=$(curl -s -w "\n%{http_code}" -X GET -H "$HDK: $HDV" "$url")
         fi
         # Extract the status code from the last line.
         status=$(echo "$response" | tail -n1)
@@ -69,7 +69,7 @@ try() {
         if [ "$method" = "POST" ]; then
             status=$(curl -o /dev/null -s -X POST -H "$HDK: $HDV" "$url" -H "Content-Type: application/json" -d "$body" -w "%{http_code}")
         else
-            status=$(curl -o /dev/null -s -X GET "$url" -w "%{http_code}")
+            status=$(curl -o /dev/null -s -X GET -H "$HDK: $HDV" "$url" -w "%{http_code}")
         fi
     fi
 

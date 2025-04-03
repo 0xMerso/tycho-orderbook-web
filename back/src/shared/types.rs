@@ -36,7 +36,7 @@ pub struct ExecutionContext {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct Response<T = String> {
+pub struct APIResponse<T = String> {
     pub success: bool,
     pub error: String,
     pub ts: u64,
@@ -80,4 +80,8 @@ pub struct EnvAPIConfig {
     pub tycho_api_key: String,
     // Network name to filter the networks.json file
     pub network: String,
+    // Origin, for CORS
+    pub origin: String,
+    // Header API key for tycho-web
+    pub web_api_key: String,
 }
