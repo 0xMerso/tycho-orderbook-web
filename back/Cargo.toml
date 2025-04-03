@@ -4,11 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# tycho-execution = { git = "https://github.com/propeller-heads/tycho-execution.git", package = "tycho-execution", features = ["evm"] }
-# tycho-client = { git = "https://github.com/propeller-heads/tycho-indexer.git", package = "tycho-client" }
-# tycho-core = { git = "https://github.com/propeller-heads/tycho-indexer.git", package = "tycho-common" }
-tycho-simulation = { git = "https://github.com/0xMerso/tycho-simulation.git", branch = "protocol-state-pub-fields", features = ["evm"]  }
 tycho-orderbook = { path = "../../tycho-orderbook" }
+tycho-simulation = { git = "https://github.com/0xMerso/tycho-simulation.git", branch = "main", features = ["evm"]  }
 utoipa = "5.3.1"
 utoipa-axum = "0.2.0"
 utoipa-swagger-ui = { version = "9", features = ["axum"] }

@@ -15,7 +15,7 @@ use tycho_orderbook::{
     core::{book, exec},
     data::fmt::{SrzProtocolComponent, SrzToken},
     maths,
-    types::{EnvConfig, ExecutionPayload, ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, SharedTychoStreamState},
+    types::{EnvConfig, ExecutionPayload, ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, SharedTychoStreamState, SrzExecutionPayload, SrzTransactionRequest},
     utils::{misc::current_timestamp, r#static::data::keys},
 };
 use utoipa::OpenApi;
@@ -39,7 +39,7 @@ use utoipa_swagger_ui::SwaggerUi;
         execute
     ),
     components(
-        schemas(Version, Network, Status, SrzToken, SrzProtocolComponent, Orderbook, ExecutionPayload, ExecutionRequest)
+        schemas(Version, Network, Status, SrzToken, SrzProtocolComponent, Orderbook, ExecutionRequest)
     ),
     servers(
         (url = "/api", description = "API base path")
@@ -189,7 +189,7 @@ async fn components(Extension(network): Extension<Network>) -> impl IntoResponse
     request_body = ExecutionRequest,
     description = "Using Tycho execution engine, build a transaction according to a given orderbook point/distribution",
     responses(
-        (status = 200, description = "The trade result", body = ExecutionPayload)
+        (status = 200, description = "The trade result", body = SrzExecutionPayload)
     ),
     tag = ("API")
 )]
@@ -198,8 +198,14 @@ async fn execute(headers: HeaderMap, Extension(network): Extension<Network>, Ext
     if let Some(e) = prevalidation(network.clone(), headers.clone(), true).await {
         return wrap(None, Some(e));
     }
-    match exec::build(network.clone(), execution.clone()).await {
-        Ok(result) => wrap(Some(result), None),
+    match exec::build(network.clone(), execution.clone(), vec![], None).await {
+        Ok(result) => {
+            let srz = SrzExecutionPayload {
+                swap: SrzTransactionRequest::from(result.swap.clone()),
+                approve: SrzTransactionRequest::from(result.approve.clone()),
+            };
+            wrap(Some(srz), None)
+        }
         Err(e) => {
             let error = e.to_string();
             wrap(None, Some(error))
