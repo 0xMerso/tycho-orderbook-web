@@ -4,6 +4,8 @@ use std::{
     io::{Read, Write},
 };
 
+use crate::types::EnvAPIConfig;
+
 // Temporary static variables for testing
 pub mod r#static {
     pub static HEADER_TYCHO_API_KEY: &str = "tycho-orderbook-web-api-key";
@@ -41,4 +43,38 @@ pub fn save1<T: Serialize>(output: T, file: &str) {
     file.write_all(json.as_bytes()).expect("Failed to write to file");
     file.write_all(b"\n").expect("Failed to write newline to file");
     file.flush().expect("Failed to flush file");
+}
+
+/**
+ * Get an environment variable
+ */
+pub fn get(key: &str) -> String {
+    match std::env::var(key) {
+        Ok(x) => x,
+        Err(_) => {
+            panic!("Environment variable not found: {}", key);
+        }
+    }
+}
+
+/**
+ * Default implementation for Env
+ */
+impl Default for EnvAPIConfig {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl EnvAPIConfig {
+    /**
+     * Create a new EnvAPIConfig
+     */
+    pub fn new() -> Self {
+        EnvAPIConfig {
+            testing: get("TESTING") == "true",
+            tycho_api_key: get("TYCHO_API_KEY"),
+            network: get("NETWORK"),
+        }
+    }
 }

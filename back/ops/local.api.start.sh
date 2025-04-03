@@ -22,7 +22,7 @@ function start() {
     echo "Build successful. Executing..."
     (
         trap - SIGINT
-        export RUST_LOG="off,tycho_orderbook=trace,stream=trace"
+        export RUST_LOG="off,tycho_orderbook=trace,stream=trace,shared=trace"
         cargo run --bin stream -q # 2>/dev/null
         # cargo watch -w src/ -x "run --bin stream" -q
     )

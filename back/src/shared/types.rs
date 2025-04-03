@@ -57,3 +57,27 @@ pub struct Version {
     #[schema(example = "0.1.0")]
     pub version: String,
 }
+
+// A simple structure for the API version.
+#[derive(Serialize, Deserialize, ToSchema)]
+pub struct PairTag {
+    #[schema(example = "ETH")]
+    pub base: String,
+    #[schema(example = "USDC")]
+    pub quote: String,
+    #[schema(example = "0xETH")]
+    pub addrbase: String,
+    #[schema(example = "0xUSDC")]
+    pub addrquote: String,
+}
+
+/// Environment configuration expected
+#[derive(Debug, Clone)]
+pub struct EnvAPIConfig {
+    // True if testing mode, simplify some operations
+    pub testing: bool,
+    // API key for Tycho, faster synchronization
+    pub tycho_api_key: String,
+    // Network name to filter the networks.json file
+    pub network: String,
+}

@@ -9,13 +9,13 @@ use serde_json::json;
 use shared::{
     getters,
     helpers::prevalidation,
-    types::{Response, Status, Version},
+    types::{EnvAPIConfig, PairTag, Response, Status, Version},
 };
 use tycho_orderbook::{
     core::{book, exec},
     data::fmt::{SrzProtocolComponent, SrzToken},
     maths,
-    types::{EnvConfig, ExecutionPayload, ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, SharedTychoStreamState, SrzExecutionPayload, SrzTransactionRequest},
+    types::{EnvConfig, ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, SharedTychoStreamState, SrzExecutionPayload, SrzTransactionRequest},
     utils::{misc::current_timestamp, r#static::data::keys},
 };
 use utoipa::OpenApi;
@@ -154,6 +154,31 @@ async fn tokens(Extension(network): Extension<Network>) -> impl IntoResponse {
     }
 }
 
+// GET /pairs => Get all possible pairs
+#[utoipa::path(
+    get,
+    path = "/pairs",
+    summary = "Tycho pairs (0xETH-0xUSDC, with addresses), etc.",
+    description = "Returns all pairs available on the network, based on the components (filtered)",
+    responses(
+        (status = 200, description = "Tycho Pairs", body = Vec<PairTag>)
+    ),
+    tag = (
+        "API"
+    )
+)]
+async fn pairs(Extension(network): Extension<Network>) -> impl IntoResponse {
+    tracing::info!("👾 API: GET /pairs on {} network", network.name);
+    match getters::pairs(network).await {
+        Some(pairs) => wrap(Some(pairs), None),
+        _ => {
+            let msg = "Failed to generate pair tags";
+            tracing::error!("{}", msg);
+            wrap(None, Some(msg.to_string()))
+        }
+    }
+}
+
 // GET /components => Get all existing components
 #[utoipa::path(
     get,
@@ -248,11 +273,13 @@ async fn orderbook(
             let srzt0 = atks.iter().find(|x| x.address.to_lowercase() == targets[0].clone().to_lowercase());
             let srzt1 = atks.iter().find(|x| x.address.to_lowercase() == targets[1].clone().to_lowercase());
             if srzt0.is_none() {
-                tracing::error!("Couldn't find tokens[0]: {}", targets[0]);
-                return wrap(None, Some("Couldn't find tokens for pair tag given (tokens[0])".to_string()));
+                let msg = format!("Couldn't find tokens[0]: {}", targets[0]);
+                tracing::error!("{}", msg.clone());
+                return wrap(None, Some(msg.to_string()));
             } else if srzt1.is_none() {
-                tracing::error!("Couldn't find  tokens[1]: {}", targets[1]);
-                return wrap(None, Some("Couldn't find tokens for pair tag given (tokens[1])".to_string()));
+                let msg = format!("Couldn't find tokens[1]: {}", targets[1]);
+                tracing::error!("{}", msg.clone());
+                return wrap(None, Some(msg.to_string()));
             }
             let srzt0 = srzt0.unwrap();
             let srzt1 = srzt1.unwrap();
@@ -348,7 +375,7 @@ async fn orderbook(
     }
 }
 
-pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvConfig) {
+pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvAPIConfig) {
     tracing::info!("👾 Launching API for '{}' network | 🧪 Testing mode: {:?} | Port: {}", n.name, config.testing, n.port);
     // shd::utils::misc::tracing::tracingtest();
     let rstate = shared.read().await;
@@ -370,6 +397,7 @@ pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvConfig
         .route("/status", get(status))
         .route("/tokens", get(tokens))
         .route("/components", get(components))
+        .route("/pairs", get(pairs))
         .route("/orderbook", post(orderbook))
         .route("/execute", post(execute))
         // Swagger

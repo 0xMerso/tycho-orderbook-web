@@ -4,7 +4,7 @@ use tycho_orderbook::{
     utils::r#static::data::keys,
 };
 
-use crate::types::Status;
+use crate::types::{PairTag, Status};
 
 /// Get components for a given network
 pub async fn components(network: Network) -> Option<Vec<SrzProtocolComponent>> {
@@ -27,5 +27,18 @@ pub async fn status(network: Network) -> Option<Status> {
     match (stream, latest) {
         (Some(stream), Some(latest)) => Some(Status { stream, latest: latest.to_string() }),
         _ => None,
+    }
+}
+
+/// Get components for a given network
+pub async fn pairs(network: Network) -> Option<Vec<PairTag>> {
+    let key = keys::stream::components(network.name.clone());
+    match crate::data::get::<Vec<SrzProtocolComponent>>(key.as_str()).await {
+        Some(components) => {
+            let pairs = crate::helpers::generate_pair_tags(&components);
+            tracing::info!("Generate {} uniq pairs.", pairs.len());
+            Some(pairs)
+        }
+        None => None,
     }
 }

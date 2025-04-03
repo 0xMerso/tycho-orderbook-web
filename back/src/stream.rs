@@ -3,13 +3,13 @@ use std::sync::Arc;
 
 use futures::StreamExt;
 use shared::getters;
+use shared::types::EnvAPIConfig;
 use shared::types::StreamState;
 use tokio::sync::RwLock;
 use tycho_orderbook::core::rpc;
 use tycho_orderbook::data::fmt::SrzProtocolComponent;
 use tycho_orderbook::data::fmt::SrzToken;
 use tycho_orderbook::types;
-use tycho_orderbook::types::EnvConfig;
 use tycho_orderbook::types::Network;
 use tycho_orderbook::types::OrderbookBuilder;
 use tycho_orderbook::types::OrderbookBuilderConfig;
@@ -27,10 +27,10 @@ use tycho_simulation::tycho_client::feed::component_tracker::ComponentFilter;
 pub mod axum;
 
 /// Stream the entire state from each AMMs, with TychoStreamBuilder.
-async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig) {
+async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPIConfig) {
     tracing::debug!(" 1️⃣  Launching ProtocolStreamBuilder task for {}", network.name);
     let (_, _, chain) = types::chain(network.name.clone()).expect("Invalid chain");
-    let tokens = match rpc::tokens(&network, &config).await {
+    let tokens = match rpc::tokens(&network, config.tycho_api_key.clone()).await {
         Some(t) => t,
         None => {
             tracing::error!("Failed to get tokens. Retrying.");
@@ -50,7 +50,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
         let builder_config = OrderbookBuilderConfig {
             filter: ComponentFilter::with_tvl_range(REMOVE_TVL_THRESHOLD, ADD_TVL_THRESHOLD),
         };
-        let builder = OrderbookBuilder::new(network.clone(), config.clone(), builder_config.clone(), Some(tokens.clone())).await;
+        let builder = OrderbookBuilder::new(network.clone(), config.tycho_api_key.clone(), builder_config.clone(), Some(tokens.clone())).await;
         match builder.psb.build().await {
             Ok(mut stream) => {
                 while let Some(msg) = stream.next().await {
@@ -170,6 +170,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvConfig
                     "Failed to create stream: {:?}. Wait a few minutes. You can try again by changing the Tycho Stream filters, or with a dedicated API key.",
                     e.to_string()
                 );
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
                 continue 'retry;
             }
         }
@@ -185,7 +186,7 @@ async fn main() {
     tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init(); // <--- Set the log level here
     tracing::info!("--- --- --- Launching Tycho Orderbook (stream & API) --- --- ---");
     dotenv::from_filename(".env.prod").ok(); // Use .env.ex for testing purposes but use .env.prod with your own API key
-    let config = EnvConfig::new();
+    let config = EnvAPIConfig::new();
     tracing::info!("Launching Stream on {} | 🧪 Testing mode: {:?}", config.network, config.testing);
     let networks = tycho_orderbook::utils::r#static::networks();
     let network = networks.clone().into_iter().find(|x| x.name == config.network).expect("Network not found");

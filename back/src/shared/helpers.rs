@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use axum::http::HeaderMap;
 use tycho_orderbook::{
     data::fmt::SrzProtocolComponent,
@@ -8,7 +10,7 @@ use tycho_orderbook::{
 use crate::{
     getters,
     misc::r#static::{HEADER_TYCHO_API_KEY, TMP_HD_VALUE},
-    types::StreamState,
+    types::{PairTag, StreamState},
 };
 
 /// Verify orderbook cache
@@ -49,7 +51,7 @@ pub fn validate_headers(headers: &HeaderMap) -> bool {
     match headers.get(key) {
         Some(value) => {
             if let Ok(api_key) = value.to_str() {
-                tracing::info!("Got API key: {}", api_key);
+                // tracing::trace!("Got header API key: {}", api_key);
                 if api_key.to_lowercase() == TMP_HD_VALUE {
                     return true;
                 } else {
@@ -95,4 +97,42 @@ pub async fn prevalidation(network: Network, headers: HeaderMap, initialised: bo
         return Some(msg.to_string());
     }
     None
+}
+
+/// Generate all unique unordered pairs based on token address from a slice of protocol components.
+/// Each component's tokens are paired and uniqueness is enforced on the pair (addrbase, addrquote).
+pub fn generate_pair_tags(components: &[SrzProtocolComponent]) -> Vec<PairTag> {
+    let mut seen = HashSet::new();
+    let mut pairs = Vec::new();
+
+    for component in components {
+        let tokens = &component.tokens;
+        if tokens.len() < 2 {
+            continue;
+        }
+        // Create all unique pairs from the tokens vector
+        for i in 0..tokens.len() {
+            for j in i + 1..tokens.len() {
+                let token1 = &tokens[i];
+                let token2 = &tokens[j];
+                // Order tokens by address to ensure uniqueness regardless of order.
+                let (first, second) = if token1.address <= token2.address { (token1, token2) } else { (token2, token1) };
+                let key = (first.address.clone(), second.address.clone());
+                if seen.contains(&key) {
+                    continue;
+                }
+                seen.insert(key);
+                pairs.push(PairTag {
+                    base: first.symbol.clone(),
+                    quote: second.symbol.clone(),
+                    addrbase: first.address.clone(),
+                    addrquote: second.address.clone(),
+                });
+            }
+        }
+    }
+
+    // Optional: sort the pairs by addrbase then addrquote for consistent ordering.
+    pairs.sort_by(|a, b| a.addrbase.cmp(&b.addrbase).then(a.addrquote.cmp(&b.addrquote)));
+    pairs
 }
