@@ -270,7 +270,7 @@ async fn orderbook(
     Extension(network): Extension<Network>,
     AxumExJson(params): AxumExJson<OrderbookRequestParams>,
 ) -> impl IntoResponse {
-    let single = params.sps.is_some();
+    let single = params.point.is_some();
     tracing::info!("👾 API: OrderbookRequestParams: {:?} | Single: {}", params, single);
     let mtx = shtss.read().await;
     let initialised = mtx.initialised;
