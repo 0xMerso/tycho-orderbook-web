@@ -29,8 +29,11 @@ services:
         - PROGRAM=stream
     ports:
       - "42001:42001"
+      
+    # tycho-orderbook = { path = "../../tycho-orderbook-sdk" }
     volumes:
       - ./back:/app
+      - ../tycho-orderbook-sdk:/app/tycho-orderbook-sdk
     depends_on:
       redis:
         condition: service_healthy
@@ -43,3 +46,24 @@ services:
     restart: always
     networks:
       - tycho
+
+  # web:
+  #     build:
+  #       context: front
+  #       dockerfile: ops/Dockerfile
+  #     ports:
+  #       - "3000:3000"
+  #     volumes:
+  #       - ./front:/app
+  #       - node_modules:/app/node_modules
+  #     command: pnpm dev
+  #     env_file: 
+  #       - front/.env
+  #     depends_on:
+  #       - ethereum
+  #     restart: always
+  #     networks:
+  #       - tycho
+  
+# volumes:
+#   node_modules:
