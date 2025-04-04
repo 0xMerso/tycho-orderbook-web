@@ -29,11 +29,9 @@ services:
         - PROGRAM=stream
     ports:
       - "42001:42001"
-      
-    # tycho-orderbook = { path = "../../tycho-orderbook-sdk" }
     volumes:
       - ./back:/app
-      - ../tycho-orderbook-sdk:/app/tycho-orderbook-sdk
+      - ../tycho-orderbook-sdk:/tycho-orderbook-sdk
     depends_on:
       redis:
         condition: service_healthy
