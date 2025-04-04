@@ -31,11 +31,13 @@ services:
       - "42001:42001"
     volumes:
       - ./back:/app
+    # command: cargo watch -w /app -x "run --bin stream"
     depends_on:
       redis:
         condition: service_healthy
     env_file:
       - back/.env
+    # environment complete or overwrite env_file
     environment:
       - BUILD_TYPE=debug
       - REDIS_HOST=redis
@@ -43,3 +45,24 @@ services:
     restart: always
     networks:
       - tycho
+
+  # web:
+  #     build:
+  #       context: front
+  #       dockerfile: ops/Dockerfile
+  #     ports:
+  #       - "3000:3000"
+  #     volumes:
+  #       - ./front:/app
+  #       - node_modules:/app/node_modules
+  #     command: pnpm dev
+  #     env_file: 
+  #       - front/.env
+  #     depends_on:
+  #       - ethereum
+  #     restart: always
+  #     networks:
+  #       - tycho
+  
+# volumes:
+#   node_modules:
