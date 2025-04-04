@@ -8956,8 +8956,6 @@ dependencies = [
  "alloy-primitives",
  "anyhow",
  "async-trait",
- "axum 0.8.3",
- "axum-macros",
  "bytes",
  "chrono",
  "clippy",
@@ -8991,7 +8989,6 @@ dependencies = [
  "tycho-simulation",
  "url",
  "utoipa 5.3.1",
- "utoipa-axum",
 ]
 
 [[package]]

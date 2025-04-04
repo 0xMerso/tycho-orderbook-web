@@ -39,11 +39,12 @@ use utoipa_swagger_ui::SwaggerUi;
         status,
         tokens,
         components,
+        pairs,
         orderbook,
         execute
     ),
     components(
-        schemas(Version, Network, Status, SrzToken, SrzProtocolComponent, Orderbook, ExecutionRequest)
+        schemas(Version, Network, Status, SrzToken, SrzProtocolComponent, Orderbook, ExecutionRequest, PairTag)
     ),
     servers(
         (url = "/api", description = "API base path")
@@ -429,7 +430,8 @@ pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvAPICon
     tracing::info!(" => rstate.initialised => {:?} ", rstate.initialised);
     drop(rstate);
 
-    let cors = match config.testing {
+    // --- CORS ---
+    let _cors = match config.testing {
         true => {
             tracing::debug!("Testing mode enabled, CORS disabled");
             CorsLayer::new().allow_origin(Any).allow_methods([http::Method::GET, http::Method::POST]).allow_headers(Any)
@@ -444,6 +446,7 @@ pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvAPICon
             // .allow_headers([http::header::CONTENT_TYPE])
         }
     };
+
     // Add /api prefix
     let inner = Router::new()
         .route("/", get(root))
