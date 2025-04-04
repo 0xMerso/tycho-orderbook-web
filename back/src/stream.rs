@@ -46,7 +46,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
     'retry: loop {
         let key = keys::stream::tokens(network.name.clone());
         shared::data::set(key.as_str(), srztokens.clone()).await;
-        tracing::debug!("Connecting to >>> ProtocolStreamBuilder <<< at {} on {:?} ...\n", network.tycho, chain);
+        tracing::debug!("Connecting to ProtocolStreamBuilder at {} on {:?} ...", network.tycho, chain);
         let builder_config = OrderbookBuilderConfig {
             filter: ComponentFilter::with_tvl_range(REMOVE_TVL_THRESHOLD, ADD_TVL_THRESHOLD),
         };
@@ -57,7 +57,9 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                     match msg {
                         Ok(msg) => {
                             tracing::info!(
-                                "🔸 Stream: block # {} with {} states updates, + {} pairs, - {} pairs",
+                                "{} '{}' stream: block # {} with {} states updates, + {} pairs, - {} pairs",
+                                network.tag.clone(),
+                                network.name.clone(),
                                 msg.block_number,
                                 msg.states.len(),
                                 msg.new_pairs.len(),
@@ -177,6 +179,8 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
     }
 }
 
+pub type Cache = Arc<RwLock<HashMap<String, Arc<RwLock<TychoStreamState>>>>>;
+
 /**
  * Stream the entire state from each AMMs, with TychoStreamBuilder.
  */
@@ -184,43 +188,57 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
 async fn main() {
     let filter = tracing_subscriber::EnvFilter::from_default_env();
     tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init(); // <--- Set the log level here
-    tracing::info!("--- --- --- Launching Tycho Orderbook (stream & API) --- --- ---");
+    tracing::info!("--- --- --- Launching Tycho Orderbook (streams & API) --- --- ---");
     dotenv::from_filename(".env").ok(); // Use .env.ex for testing purposes
     let config = EnvAPIConfig::new();
-    tracing::info!("Launching Stream on {} | 🧪 Testing mode: {:?}", config.network, config.testing);
+    tracing::info!("Launching Tycho streams on {:?} | 🧪 Testing mode: {:?}", config.networks, config.testing);
     let networks = tycho_orderbook::utils::r#static::networks();
-    let network = networks.clone().into_iter().find(|x| x.name == config.network).expect("Network not found");
-    tracing::info!("Tycho Stream for '{}' network", network.name.clone());
-    shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Launching as u128).await;
-    shared::data::set(keys::stream::latest(network.name.clone().to_string()).as_str(), 0).await;
-    shared::data::ping().await;
-    // Shared state
-    let stss: SharedTychoStreamState = Arc::new(RwLock::new(TychoStreamState {
-        protosims: HashMap::new(),  // Protosims cannot be stored in Redis so we always used shared memory state to access/update them
-        components: HashMap::new(), // 📕 Read/write via Redis only
-        initialised: false,
-    }));
-    let readable = Arc::clone(&stss);
-    // Start the server, only reading from the shared state
-    let dupn = network.clone();
+    for network in networks.clone() {
+        shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Launching as u128).await;
+        shared::data::set(keys::stream::latest(network.name.clone().to_string()).as_str(), 0).await;
+        shared::data::ping().await;
+    }
+    // --- Create a cache for the shared state, this is the key to share the state between streams and API tasks ---
+    let cache: Arc<RwLock<HashMap<String, SharedTychoStreamState>>> = Arc::new(RwLock::new(HashMap::new()));
+    // --- Initialize state for each network ---
+    for net in &networks {
+        cache.write().await.insert(
+            net.name.clone(),
+            Arc::new(RwLock::new(TychoStreamState {
+                protosims: HashMap::new(),
+                components: HashMap::new(),
+                initialised: false,
+            })),
+        );
+    }
+    let readable = Arc::clone(&cache);
     let dupc = config.clone();
+    let dupnets = networks.clone();
+    // --- Spawn the Axum server, one for all networks ---
     tokio::spawn(async move {
         loop {
-            axum::start(dupn.clone(), Arc::clone(&readable), dupc.clone()).await;
-            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(2477)).await;
+            axum::start(dupnets.clone(), Arc::clone(&readable), dupc.clone()).await;
         }
     });
-    // Get tokens and launch the stream
-    // Start the stream, writing to the shared state
-    let writeable = Arc::clone(&stss);
-    tokio::spawn(async move {
-        loop {
-            let config = config.clone();
-            let network = network.clone();
-            stream(network.clone(), Arc::clone(&writeable), config.clone()).await;
-            tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-        }
-    });
+    // --- Stream for each network ---
+    for net in networks {
+        let config = config.clone();
+        let states_clone = Arc::clone(&cache);
+        tokio::spawn(async move {
+            loop {
+                // Retrieve the shared state for this network
+                let state = {
+                    let map = states_clone.read().await;
+                    map.get(&net.name).unwrap().clone()
+                };
+                // Call your stream function with the network-specific state
+                stream(net.clone(), state, config.clone()).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(5000)).await;
+            }
+        });
+    }
+    // --- Keep the program running ---
     futures::future::pending::<()>().await;
-    tracing::info!("Stream program terminated");
+    tracing::debug!("Stream program terminated");
 }

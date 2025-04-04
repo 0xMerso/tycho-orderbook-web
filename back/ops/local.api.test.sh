@@ -5,6 +5,7 @@
 set -e
 
 network=$1
+PORT=42042
 
 if [ -z "$network" ]; then
     echo "Usage: $0 <network>"
@@ -13,7 +14,6 @@ fi
 
 if [ "$network" = "ethereum" ]; then
     echo "Testing on Mainnet"
-    PORT=42001
     export eth="0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
     export usdc="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
     export wbtc="0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"
@@ -21,7 +21,6 @@ if [ "$network" = "ethereum" ]; then
     export usdt="0xdac17f958d2ee523a2206206994597c13d831ec7"
 elif [ "$network" = "base" ]; then
     echo "Testing on Base"
-    PORT=42003
     export eth="0x4200000000000000000000000000000000000006"
     export usdc="0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
     export wbtc="0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf"
@@ -33,7 +32,7 @@ else
 fi
 
 API_HOST=${API_HOST:-127.0.0.1}
-LOG=${LOG:-false}
+LOG=${LOG:-true}
 API_URL="http://$API_HOST:$PORT/api"
 echo "Testing API at $API_URL"
 
@@ -49,6 +48,7 @@ try() {
     [ -n "$body" ] && method="POST"
 
     echo "Testing $description"
+    echo "cURL: $url"
 
     local status=""
     if [ "$LOG" = "true" ]; then
@@ -81,18 +81,21 @@ try() {
     echo "--- --- --- --- ---"
 }
 
+# Test endpoints that do not require a network
 # Test endpoints that do not require a body.
 try "GET /" "$API_URL"
 try "GET /version" "$API_URL/version"
-try "GET /network" "$API_URL/network"
-try "GET /status" "$API_URL/status"
-# try "GET /tokens" "$API_URL/tokens"
-# try "GET /components" "$API_URL/components"
-try "GET /pairs" "$API_URL/pairs"
+try "GET /networks" "$API_URL/networks"
+
+# Test endpoints that require a network
+try "GET /$network/status" "$API_URL/$network/status"
+try "GET /$network/tokens" "$API_URL/$network/tokens"
+try "GET /$network/components" "$API_URL/$network/components"
+try "GET /$network/pairs" "$API_URL/$network/pairs"
 
 # Test simulations
-try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdc"'"}'
-try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$wbtc"'"}'
+try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'"}'
+# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$wbtc"'"}'
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$dai"'"}'
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdt"'"}'
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$usdc-$wbtc"'"}'
@@ -101,8 +104,8 @@ try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$wbtc"'"}'
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$wbtc-$dai"'"}'
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$wbtc-$usdt"'"}'
 
-try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$eth"'", "amount": 100}}'
-try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$usdc"'", "amount": 1000}}'
+try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$eth"'", "amount": 100}}'
+# try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$usdc"'", "amount": 1000}}'
 # try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$eth-$wbtc"'", "point": {"input": "'"$eth"'", "amount": 100}}'
 # try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$eth-$dai"'", "point": {"input": "'"$eth"'", "amount": 1000}}'
 # try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdt"'", "point": {"input": "'"$eth"'", "amount": 100}}'
@@ -112,6 +115,5 @@ try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdc"'
 # try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$wbtc-$dai"'", "point": {"input": "'"$wbtc"'", "amount": 1}}'
 # try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$wbtc-$usdt"'", "point": {"input": "'"$wbtc"'", "amount": 1}}'
 
-# No orderbook for these pairs
-# usdp="0x8e870d67f660d95d5be530380d0ec0bd388289e1"
-try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdp"'"}'
+# usdp="0x8e870d67f660d95d5be530380d0ec0bd388289e1" # Trying when no orderbook available
+# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdp"'"}'

@@ -1,8 +1,6 @@
 RED='\033[0;31m'
 NC='\033[0m' # No Color
-# NETWORK=ethereum
 RPC="https://rpc.payload.de"
-NETWORK="$1"
 
 function start() {
 
@@ -17,7 +15,6 @@ function start() {
     sleep 1
     # ------------- Execute -------------
     echo "Building ..."
-    export NETWORK=$NETWORK
     cargo build --bin stream -q 2>/dev/null
     echo "Build successful. Executing..."
     (

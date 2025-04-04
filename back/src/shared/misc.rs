@@ -71,16 +71,18 @@ impl EnvAPIConfig {
      * Create a new EnvAPIConfig
      */
     pub fn new() -> Self {
+        let networks: Vec<String> = get("NETWORKS").to_lowercase().split(",").map(|s| s.to_string()).collect();
         EnvAPIConfig {
+            networks: networks.clone(),
+            origin: get("ORIGIN"),
             testing: get("TESTING") == "true",
             tycho_api_key: get("TYCHO_API_KEY"),
-            network: get("NETWORK"),
-            origin: get("ORIGIN"),
             web_api_key: get("WEB_API_KEY"),
         }
     }
 }
 
+/// Temporary variables for testing
 pub fn top_pairs() -> Vec<String> {
     vec![
         "DAI-WETH".to_string(),

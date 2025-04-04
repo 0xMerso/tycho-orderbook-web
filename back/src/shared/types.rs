@@ -78,8 +78,8 @@ pub struct EnvAPIConfig {
     pub testing: bool,
     // API key for Tycho, faster synchronization
     pub tycho_api_key: String,
-    // Network name to filter the networks.json file
-    pub network: String,
+    // Network names, comma separated => "ethereum,base"
+    pub networks: Vec<String>,
     // Origin, for CORS
     pub origin: String,
     // Header API key for tycho-web

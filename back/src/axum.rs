@@ -35,7 +35,7 @@ use utoipa_swagger_ui::SwaggerUi;
     ),
     paths(
         version,
-        network,
+        networks,
         status,
         tokens,
         components,
@@ -47,7 +47,9 @@ use utoipa_swagger_ui::SwaggerUi;
         schemas(Version, Network, Status, SrzToken, SrzProtocolComponent, Orderbook, ExecutionRequest, PairTag)
     ),
     servers(
-        (url = "/api", description = "API base path")
+        (url = "/api", description = "Root API"),
+        (url = "/api/ethereum", description = "Ethereum network"),
+        (url = "/api/base", description = "Base network")
     ),
     tags(
         (name = "API", description = "Endpoints")
@@ -110,14 +112,14 @@ async fn version(headers: HeaderMap, Extension(config): Extension<EnvAPIConfig>)
     path = "/network",
     summary = "Network configuration",
     responses(
-        (status = 200, description = "Network configuration", body = Network)
+        (status = 200, description = "Network configuration", body = Vec<Network>)
     ),
     tag = (
         "API"
     )
 )]
-async fn network(headers: HeaderMap, Extension(network): Extension<Network>, Extension(config): Extension<EnvAPIConfig>) -> impl IntoResponse {
-    tracing::info!("👾 API: GET /network on {} network", network.name);
+async fn networks(headers: HeaderMap, Extension(network): Extension<Vec<Network>>, Extension(config): Extension<EnvAPIConfig>) -> impl IntoResponse {
+    tracing::info!("👾 API: GET /networks");
     let (allowed, msg) = validate_headers(&headers, config.web_api_key);
     if !allowed {
         return wrap(None, Some(msg));
@@ -253,7 +255,7 @@ async fn execute(
     Extension(config): Extension<EnvAPIConfig>,
     AxumExJson(execution): AxumExJson<ExecutionRequest>,
 ) -> impl IntoResponse {
-    tracing::info!("👾 API: Querying execute endpoint: {:?}", execution);
+    tracing::info!("👾 API: {} : Querying execute endpoint: {:?}", network.name, execution);
     if let Some(e) = prevalidation(network.clone(), headers.clone(), true, config.web_api_key).await {
         return wrap(None, Some(e));
     }
@@ -300,7 +302,7 @@ async fn orderbook(
     AxumExJson(params): AxumExJson<OrderbookRequestParams>,
 ) -> impl IntoResponse {
     let single = params.point.is_some();
-    tracing::info!("👾 API: OrderbookRequestParams: {:?} | Single: {}", params, single);
+    tracing::info!("👾 API: {} : OrderbookRequestParams: {:?} | Single: {}", network.name, params, single);
     let mtx = shtss.read().await;
     let initialised = mtx.initialised;
     drop(mtx);
@@ -416,20 +418,10 @@ async fn orderbook(
     }
 }
 
-pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvAPIConfig) {
-    tracing::info!("👾 Launching API for '{}' network | 🧪 Testing mode: {:?} | Port: {}", n.name, config.testing, n.port);
-    // shd::utils::misc::tracing::tracingtest();
-    let rstate = shared.read().await;
-    tracing::info!("Testing SharedTychoStreamState read = {:?} with {:?}", rstate.protosims.keys(), rstate.protosims.values());
-    tracing::info!(" => rstate.states.keys and rstate.states.values => {:?} with {:?}", rstate.protosims.keys(), rstate.protosims.values());
-    tracing::info!(
-        " => rstate.components.keys and rstate.components.values => {:?} with {:?}",
-        rstate.components.keys(),
-        rstate.components.values()
-    );
-    tracing::info!(" => rstate.initialised => {:?} ", rstate.initialised);
-    drop(rstate);
-
+pub async fn start(nets: Vec<Network>, shared: crate::Cache, config: EnvAPIConfig) {
+    let port = 42042;
+    let names = nets.clone().iter().map(|n| n.name.clone()).collect::<Vec<String>>();
+    tracing::info!("👾 Launching API for '{:?}' network | 🧪 Testing mode: {:?} | Port: {}", names, config.testing, port);
     // --- CORS ---
     let _cors = match config.testing {
         true => {
@@ -446,39 +438,51 @@ pub async fn start(n: Network, shared: SharedTychoStreamState, config: EnvAPICon
             // .allow_headers([http::header::CONTENT_TYPE])
         }
     };
-
-    // Add /api prefix
-    let inner = Router::new()
+    // --- Main router ---
+    let mut main = Router::new()
         .route("/", get(root))
         .route("/version", get(version))
-        .route("/network", get(network))
-        .route("/status", get(status))
-        .route("/tokens", get(tokens))
-        .route("/components", get(components))
-        .route("/pairs", get(pairs))
-        .route("/orderbook", post(orderbook))
-        .route("/execute", post(execute))
-        // --- Inner Middleware ---
-        // .layer(from_fn(header_check))
-        // .layer(cors);
-        // --- Swagger ---
-        .layer(Extension(shared.clone())) // Shared state
-        .layer(Extension(n.clone()))
-        .layer(Extension(config.clone())); // EnvAPIConfig
+        .route("/networks", get(networks))
+        .layer(Extension(config.clone()))
+        .layer(Extension(nets.clone()));
 
-    let app = Router::new().nest("/api", inner).merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", APIDoc::openapi()));
+    // --- Network router ---
+    for network in nets.clone().iter() {
+        let prefix = format!("/{}", network.name);
+        let state = {
+            let map = shared.read().await;
+            map.get(&network.name).cloned().expect("Missing state for network")
+        };
+        let netr = Router::new()
+            // Network-specific routes (e.g. components, pairs, etc.)
+            .route("/status", get(status))
+            .route("/tokens", get(tokens))
+            .route("/components", get(components))
+            .route("/pairs", get(pairs))
+            .route("/orderbook", post(orderbook))
+            .route("/execute", post(execute))
+            .layer(Extension(network.clone()))
+            .layer(Extension(state))
+            .layer(Extension(config.clone()));
 
-    match tokio::net::TcpListener::bind(format!("0.0.0.0:{}", n.port)).await {
+        // Nest each network router under its prefix
+        main = main.nest(&prefix, netr);
+    }
+    // --- Merge routers ---
+    let app = Router::new().nest("/api", main).merge(SwaggerUi::new("/swagger").url("/api-docs/openapi.json", APIDoc::openapi()));
+
+    // --- Start the server ---
+    match tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await {
         Ok(listener) => match axum::serve(listener, app).await {
             Ok(_) => {
-                tracing::info!("(tracings never displayed in theory): API for '{}' network is running on port {}", n.name, n.port);
+                tracing::info!("(tracings never displayed in theory): API for '{:?}' nets is running on port {}", names, port);
             }
             Err(e) => {
-                tracing::error!("Failed to start API for '{}' network: {}", n.name, e);
+                tracing::error!("Failed to start API for '{:?}' network: {}", names, e);
             }
         },
         Err(e) => {
-            tracing::error!("Failed to bind to port {}: {}", n.port, e);
+            tracing::error!("Failed to bind to port {}: {}", port, e);
         }
     }
 }
