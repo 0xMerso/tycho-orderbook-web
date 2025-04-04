@@ -29,7 +29,7 @@ use utoipa_swagger_ui::SwaggerUi;
 #[derive(OpenApi)]
 #[openapi(
     info(
-        title = "TAP-2 Orderbook API",
+        title = "Tycho Orderbook API",
         version = "1.0.0",
         description = "An Rust Axum API serving different Tycho Streams, providing orderbook and liquidity data for one network",
     ),
