@@ -419,7 +419,7 @@ async fn orderbook(
 }
 
 pub async fn start(nets: Vec<Network>, shared: crate::Cache, config: EnvAPIConfig) {
-    let port = 42042;
+    let port = config.api_port.parse::<u16>().unwrap_or(42042);
     let names = nets.clone().iter().map(|n| n.name.clone()).collect::<Vec<String>>();
     tracing::info!("👾 Launching API for '{:?}' network | 🧪 Testing mode: {:?} | Port: {}", names, config.testing, port);
     // --- CORS ---
@@ -464,7 +464,6 @@ pub async fn start(nets: Vec<Network>, shared: crate::Cache, config: EnvAPIConfi
             .layer(Extension(network.clone()))
             .layer(Extension(state))
             .layer(Extension(config.clone()));
-
         // Nest each network router under its prefix
         main = main.nest(&prefix, netr);
     }

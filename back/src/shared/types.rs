@@ -84,4 +84,6 @@ pub struct EnvAPIConfig {
     pub origin: String,
     // Header API key for tycho-web
     pub web_api_key: String,
+    // Header API key for tycho-web
+    pub api_port: String,
 }

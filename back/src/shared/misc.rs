@@ -78,6 +78,7 @@ impl EnvAPIConfig {
             testing: get("TESTING") == "true",
             tycho_api_key: get("TYCHO_API_KEY"),
             web_api_key: get("WEB_API_KEY"),
+            api_port: get("API_PORT"),
         }
     }
 }
