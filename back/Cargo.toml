@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-tycho-orderbook = { path = "../../tycho-orderbook-sdk" }
+tycho-orderbook = "0.1.0" # { path = "../../tycho-orderbook-sdk" }
 tycho-simulation = "0.91.1" # Patched below
 
 utoipa = "5.3.1"
