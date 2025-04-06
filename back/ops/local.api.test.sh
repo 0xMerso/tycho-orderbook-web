@@ -84,9 +84,9 @@ try() {
 
 # Test endpoints that do not require a network
 # Test endpoints that do not require a body.
-try "GET /" "$API_URL"
-try "GET /version" "$API_URL/version"
-try "GET /networks" "$API_URL/networks"
+# try "GET /" "$API_URL"
+# try "GET /version" "$API_URL/version"
+# try "GET /networks" "$API_URL/networks"
 
 # Test endpoints that require a network
 # try "GET /$network/status" "$API_URL/$network/status"
@@ -96,16 +96,16 @@ try "GET /networks" "$API_URL/networks"
 
 # Test simulations
 # try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'"}'
-# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$wbtc"'"}'
-# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$dai"'"}'
-# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdt"'"}'
-# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$usdc-$wbtc"'"}'
-# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$usdc-$dai"'"}'
-# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$usdc-$usdt"'"}'
-# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$wbtc-$dai"'"}'
-# try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$wbtc-$usdt"'"}'
+# try "POST /$network/orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$wbtc"'"}'
+# try "POST /$network/orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$dai"'"}'
+# try "POST /$network/orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdt"'"}'
+# try "POST /$network/orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$usdc-$wbtc"'"}'
+# try "POST /$network/orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$usdc-$dai"'"}'
+# try "POST /$network/orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$usdc-$usdt"'"}'
+try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$wbtc-$dai"'"}'
+try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$wbtc-$usdt"'"}'
 
-try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$eth"'", "amount": 100}}'
+# try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$eth"'", "amount": 100}}'
 # try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$usdc"'", "amount": 1000}}'
 # try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$eth-$wbtc"'", "point": {"input": "'"$eth"'", "amount": 100}}'
 # try "POST /orderbook (with point)" "$API_URL/orderbook" '{"tag": "'"$eth-$dai"'", "point": {"input": "'"$eth"'", "amount": 1000}}'
