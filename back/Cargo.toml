@@ -8,7 +8,8 @@ tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.
 
 [dependencies]
 # tycho-orderbook = "0.1.0" # { path = "../../tycho-orderbook-sdk" }
-tycho-orderbook = { path = "../../tycho-orderbook-sdk" }
+# tycho-orderbook = { path = "../../tycho-orderbook-sdk" }
+tycho-orderbook = { path = "/tycho-orderbook-sdk" }
 tycho-simulation = "0.92.0" # Patched below
 
 utoipa = "5.3.1"

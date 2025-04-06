@@ -31,6 +31,7 @@ services:
       - "42001:42001"
     volumes:
       - ./back:/app
+      - ../tycho-orderbook-sdk:/tycho-orderbook-sdk
     depends_on:
       redis:
         condition: service_healthy
@@ -43,6 +44,14 @@ services:
     restart: always
     networks:
       - tycho
+
+# --- --- --- Ops --- --- ---
+
+volumes:
+  - ../:/workspace
+
+
+# --- --- --- Frontend --- --- ---
 
   # web:
   #     build:
