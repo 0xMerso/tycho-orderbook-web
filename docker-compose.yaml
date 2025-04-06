@@ -21,37 +21,17 @@ services:
     networks:
       - tycho
 
-  # ethereum:
-  #   build: 
-  #     context: back
-  #     dockerfile: ops/Dockerfile
-  #     args:
-  #       - PROGRAM=stream
-  #   ports:
-  #     - "42042:42042"
-  #   volumes:
-  #    - ./back:/app
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #   env_file:
-  #     - back/.env
-  #   environment:
-  #     - BUILD_TYPE=debug
-  #     - REDIS_HOST=redis
-  #     - NETWORK=ethereum
-  #   restart: always
-  #   networks:
-  #     - tycho
-
 # --- --- --- Ops --- --- ---
+# For local crate, using parent directory as context
 
-  ethereum:
+  stream:
     build: 
       context: ..
       dockerfile: tycho-orderbook-web/back/ops/Dockerfile
+      # dockerfile: ops/Dockerfile
       args:
-        - PROGRAM=stream
+        - PROGRAM: "stream"
+        - BUILD_TYPE: "release"  # or "debug" to build in debug mode
     ports:
       - "42042:42042"
     volumes:
@@ -62,15 +42,10 @@ services:
     env_file:
       - back/.env
     environment:
-      - BUILD_TYPE=debug
       - REDIS_HOST=redis
-      - NETWORK=ethereum
     restart: always
     networks:
       - tycho
-
-# volumes:
-#   - ../:/workspace
 
 
 # --- --- --- Frontend --- --- ---
