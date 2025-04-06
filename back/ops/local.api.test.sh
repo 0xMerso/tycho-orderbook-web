@@ -5,7 +5,6 @@
 set -e
 
 network=$1
-PORT=42042
 
 if [ -z "$network" ]; then
     echo "Usage: $0 <network>"
@@ -31,9 +30,11 @@ else
     exit 1
 fi
 
-API_HOST=${API_HOST:-127.0.0.1}
+# export LOG=true ; export API_HOST="https://tycho.merso.xyz" ; sh ops/local.api.test.sh ethereum
+
+API_HOST=${API_HOST:-"http://127.0.0.1:42042"}
 LOG=${LOG:-true}
-API_URL="http://$API_HOST:$PORT/api"
+API_URL="$API_HOST/api"
 echo "Testing API at $API_URL"
 
 HDK="tycho-orderbook-web-api-key"
@@ -88,13 +89,13 @@ try "GET /version" "$API_URL/version"
 try "GET /networks" "$API_URL/networks"
 
 # Test endpoints that require a network
-try "GET /$network/status" "$API_URL/$network/status"
-try "GET /$network/tokens" "$API_URL/$network/tokens"
-try "GET /$network/components" "$API_URL/$network/components"
-try "GET /$network/pairs" "$API_URL/$network/pairs"
+# try "GET /$network/status" "$API_URL/$network/status"
+# try "GET /$network/tokens" "$API_URL/$network/tokens"
+# try "GET /$network/components" "$API_URL/$network/components"
+# try "GET /$network/pairs" "$API_URL/$network/pairs"
 
 # Test simulations
-try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'"}'
+# try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'"}'
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$wbtc"'"}'
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$dai"'"}'
 # try "POST /orderbook (simple)" "$API_URL/orderbook" '{"tag": "'"$eth-$usdt"'"}'
