@@ -9,6 +9,8 @@
 # RUN cargo build --bin stream
 # CMD ["cargo", "run", "--bin", "stream"]
 
+# Dockerfile version with parent folder as workspace in Compose
+# Used because we need local crate for the SDK, because cannot push to crates.io for now.
 FROM rust:slim
 RUN apt-get update && apt-get install -y libssl-dev pkg-config curl
 RUN cargo install cargo-watch

@@ -3,14 +3,14 @@ name = "back"
 version = "0.1.0"
 edition = "2021"
 
-[patch.crates-io]
-tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "662c37fd2cc7cff65407e3534584860aab184d69" }
+# [patch.crates-io]
+# tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "662c37fd2cc7cff65407e3534584860aab184d69" }
 
 [dependencies]
 # tycho-orderbook = "0.1.0" # { path = "../../tycho-orderbook-sdk" }
-# tycho-orderbook = { path = "../../tycho-orderbook-sdk" }
-tycho-orderbook = { path = "/tycho-orderbook-sdk" }
-tycho-simulation = "0.92.0" # Patched below
+tycho-orderbook = { path = "../../tycho-orderbook-sdk" }
+# tycho-orderbook = { path = "/tycho-orderbook-sdk" }
+tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "662c37fd2cc7cff65407e3534584860aab184d69" }
 
 utoipa = "5.3.1"
 utoipa-axum = "0.2.0"
