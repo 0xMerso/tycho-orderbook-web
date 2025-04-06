@@ -7,9 +7,9 @@ edition = "2021"
 # tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "662c37fd2cc7cff65407e3534584860aab184d69" }
 
 [dependencies]
-# tycho-orderbook = "0.1.0" # { path = "../../tycho-orderbook-sdk" }
-# tycho-orderbook = { path = "../../tycho-orderbook-sdk" }
-tycho-orderbook = { path = "/tycho-orderbook-sdk" }
+
+# tycho-orderbook = { path = "../../tycho-orderbook-sdk" } # For local build
+tycho-orderbook = { path = "/tycho-orderbook-sdk" } # For Compose, volume mounts does the job.
 tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "662c37fd2cc7cff65407e3534584860aab184d69" }
 
 utoipa = "5.3.1"
