@@ -21,17 +21,41 @@ services:
     networks:
       - tycho
 
+  # ethereum:
+  #   build: 
+  #     context: back
+  #     dockerfile: ops/Dockerfile
+  #     args:
+  #       - PROGRAM=stream
+  #   ports:
+  #     - "42042:42042"
+  #   volumes:
+  #    - ./back:/app
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   env_file:
+  #     - back/.env
+  #   environment:
+  #     - BUILD_TYPE=debug
+  #     - REDIS_HOST=redis
+  #     - NETWORK=ethereum
+  #   restart: always
+  #   networks:
+  #     - tycho
+
+# --- --- --- Ops --- --- ---
+
   ethereum:
     build: 
-      context: back
-      dockerfile: ops/Dockerfile
+      context: ..
+      dockerfile: tycho-orderbook-web/back/ops/Dockerfile
       args:
         - PROGRAM=stream
     ports:
       - "42042:42042"
     volumes:
      - ./back:/app
-     - ../tycho-orderbook-sdk:/tycho-orderbook-sdk
     depends_on:
       redis:
         condition: service_healthy
@@ -44,8 +68,6 @@ services:
     restart: always
     networks:
       - tycho
-
-# --- --- --- Ops --- --- ---
 
 # volumes:
 #   - ../:/workspace
