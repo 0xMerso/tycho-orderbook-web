@@ -28,7 +28,7 @@ services:
       args:
         - PROGRAM=stream
     ports:
-      - "42001:42001"
+      - "42042:42042"
     volumes:
       - ./back:/app
       - ../tycho-orderbook-sdk:/tycho-orderbook-sdk
@@ -47,8 +47,8 @@ services:
 
 # --- --- --- Ops --- --- ---
 
-volumes:
-  - ../:/workspace
+# volumes:
+#   - ../:/workspace
 
 
 # --- --- --- Frontend --- --- ---
