@@ -30,8 +30,8 @@ services:
     ports:
       - "42042:42042"
     volumes:
-      - ./back:/app
-      - ../tycho-orderbook-sdk:/tycho-orderbook-sdk
+     - ./back:/app
+     - ../tycho-orderbook-sdk:/tycho-orderbook-sdk
     depends_on:
       redis:
         condition: service_healthy
