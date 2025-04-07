@@ -193,6 +193,8 @@ async fn main() {
     let config = EnvAPIConfig::new();
     tracing::info!("Launching Tycho streams on {:?} | 🧪 Testing mode: {:?}", config.networks, config.testing);
     let networks = tycho_orderbook::utils::r#static::networks();
+    let targets = config.networks.clone();
+    let networks = networks.into_iter().filter(|x| targets.contains(&x.name.to_lowercase())).collect::<Vec<Network>>();
     for network in networks.clone() {
         shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Launching as u128).await;
         shared::data::set(keys::stream::latest(network.name.clone().to_string()).as_str(), 0).await;
