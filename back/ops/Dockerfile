@@ -36,6 +36,8 @@ ARG PROGRAM=stream
 ENV BUILD_TYPE=${BUILD_TYPE}
 ENV PROGRAM=${PROGRAM}
 
+RUN echo "Binary: $PROGRAM, Build type: $BUILD_TYPE" 
+
 # Build the program based on BUILD_TYPE
 RUN if [ "$BUILD_TYPE" = "release" ]; then \
     cargo build --release --bin $PROGRAM; \
@@ -43,9 +45,10 @@ RUN if [ "$BUILD_TYPE" = "release" ]; then \
     cargo build --bin $PROGRAM; \
     fi
 
+RUN ls ./target/release
+
 # Set the CMD to run the appropriate binary based on BUILD_TYPE and PROGRAM
-# CMD [ "sh", "-c", "if [ \"$BUILD_TYPE\" = \"release\" ]; then ./target/release/$PROGRAM; else ./target/debug/$PROGRAM; fi" ]
-CMD ["cargo", "run", "--bin", "$PROGRAM"]
+CMD [ "sh", "-c", "if [ \"$BUILD_TYPE\" = \"release\" ]; then ./target/release/$PROGRAM; else ./target/debug/$PROGRAM; fi" ]
 
 
 # --- DEBUG ---
