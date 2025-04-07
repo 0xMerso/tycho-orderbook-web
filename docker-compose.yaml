@@ -30,8 +30,8 @@ services:
       dockerfile: tycho-orderbook-web/back/ops/Dockerfile
       # dockerfile: ops/Dockerfile
       args:
-        - PROGRAM: "stream"
-        - BUILD_TYPE: "release"  # or "debug" to build in debug mode
+        - PROGRAM=stream
+        - BUILD_TYPE=release  # or "debug" to build in debug mode
     ports:
       - "42042:42042"
     volumes:
