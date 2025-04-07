@@ -45,11 +45,15 @@ RUN if [ "$BUILD_TYPE" = "release" ]; then \
     cargo build --bin $PROGRAM; \
     fi
 
+# Debug
+# CMD ["sh", "-c", "echo 'This works';"]
+RUN pwd
+RUN ls -la
 RUN ls ./target/release
 
 # Set the CMD to run the appropriate binary based on BUILD_TYPE and PROGRAM
-CMD [ "sh", "-c", "if [ \"$BUILD_TYPE\" = \"release\" ]; then ./target/release/$PROGRAM; else ./target/debug/$PROGRAM; fi" ]
-
+# CMD [ "sh", "-c", "if [ \"$BUILD_TYPE\" = \"release\" ]; then ./target/release/$PROGRAM; else ./target/debug/$PROGRAM; fi" ]
+CMD [ "bash", "-c", "if [ \"$BUILD_TYPE\" = \"release\" ]; then exec ./target/release/$PROGRAM; else exec ./target/debug/$PROGRAM; fi" ]
 
 # --- DEBUG ---
 # FROM rust:slim
