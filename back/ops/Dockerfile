@@ -47,9 +47,9 @@ RUN if [ "$BUILD_TYPE" = "release" ]; then \
 
 # Debug
 # CMD ["sh", "-c", "echo 'This works';"]
-RUN pwd
-RUN ls -la
-RUN ls ./target/release
+RUN echo "---- Current working directory ----" && pwd
+RUN echo "---- Full directory listing ----" && ls -la
+RUN echo "---- Release target directory listing ----" && ls ./target/release
 
 # Set the CMD to run the appropriate binary based on BUILD_TYPE and PROGRAM
 # CMD [ "sh", "-c", "if [ \"$BUILD_TYPE\" = \"release\" ]; then ./target/release/$PROGRAM; else ./target/debug/$PROGRAM; fi" ]
