@@ -38,6 +38,12 @@ ENV PROGRAM=${PROGRAM}
 
 RUN echo "Binary: $PROGRAM, Build type: $BUILD_TYPE" 
 
+RUN if [ "$BUILD_TYPE" = "release" ]; then \
+    echo "---- Release target directory listing ----" && ls ./target/release; \
+    else \
+    echo "---- Debug target directory listing ----" && ls ./target/debug; \
+    fi
+
 # Build the program based on BUILD_TYPE
 RUN if [ "$BUILD_TYPE" = "release" ]; then \
     cargo build --release --bin $PROGRAM; \
