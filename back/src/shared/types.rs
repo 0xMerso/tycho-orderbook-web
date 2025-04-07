@@ -46,7 +46,7 @@ pub struct APIResponse<T = String> {
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct Status {
     #[schema(example = "4")]
-    pub stream: u128,
+    pub stream: u128, // StreamState
     #[schema(example = "22051447")]
     pub latest: String,
 }
@@ -80,6 +80,8 @@ pub struct EnvAPIConfig {
     pub tycho_api_key: String,
     // Network names, comma separated => "ethereum,base"
     pub networks: Vec<String>,
+    // Network names, comma separated => "ethereum,base"
+    pub heartbeats: Vec<String>,
     // Origin, for CORS
     pub origin: String,
     // Header API key for tycho-web

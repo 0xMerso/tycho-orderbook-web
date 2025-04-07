@@ -13,6 +13,50 @@ use redis::{
 
 use crate::types::StreamState;
 
+pub mod data {
+
+    pub mod keys {
+
+        pub mod stream {
+
+            // stream:status:<network> => SyncState
+            pub fn tycho(network: String) -> String {
+                format!("stream:stream:{}", network.to_lowercase())
+            }
+
+            // stream:latest:<network> => u64
+            pub fn latest(network: String) -> String {
+                format!("stream:latest:{}", network.to_lowercase())
+            }
+
+            // stream:latest:<network> => u64
+            pub fn updated(network: String) -> String {
+                format!("stream:updated:{}", network.to_lowercase())
+            }
+
+            // stream:tokens:<network> => array of tokens
+            pub fn tokens(network: String) -> String {
+                format!("stream:tokens:{}", network.to_lowercase())
+            }
+
+            // Get one orderbook via tag
+            pub fn orderbook(network: String, tag: String) -> String {
+                format!("stream:orderbook:{}:{}", network.to_lowercase(), tag.to_lowercase())
+            }
+
+            // stream:component:id => one component
+            pub fn component(network: String, id: String) -> String {
+                format!("stream:{}:component:{}", network, id.to_lowercase())
+            }
+
+            // stream:components
+            pub fn components(network: String) -> String {
+                format!("stream:components:{}", network.to_lowercase())
+            }
+        }
+    }
+}
+
 pub async fn ping() {
     let co = connect().await;
     match co {

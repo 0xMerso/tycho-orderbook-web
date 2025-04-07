@@ -1,16 +1,16 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, process::Command, time::Duration};
 
 use axum::http::HeaderMap;
 use tycho_orderbook::{
     data::fmt::SrzProtocolComponent,
     types::{Network, Orderbook},
-    utils::r#static::data::keys,
 };
 
 use crate::{
+    data::data::keys,
     getters,
-    misc::r#static::HEADER_TYCHO_API_KEY,
-    types::{PairTag, StreamState},
+    misc::r#static::{HEADER_TYCHO_API_KEY, HEARTBEAT_DELAY},
+    types::{EnvAPIConfig, PairTag, StreamState},
 };
 
 /// Verify orderbook cache
@@ -132,4 +132,77 @@ pub fn generate_pair_tags(components: &[SrzProtocolComponent]) -> Vec<PairTag> {
     // Optional: sort the pairs by addrbase then addrquote for consistent ordering.
     pairs.sort_by(|a, b| a.addrbase.cmp(&b.addrbase).then(a.addrquote.cmp(&b.addrquote)));
     pairs
+}
+
+/// Get the current Git commit hash
+pub fn commit() -> Option<String> {
+    let output = Command::new("git").args(["rev-parse", "HEAD"]).output().expect("Failed to execute git command");
+    if output.status.success() {
+        let commit = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        tracing::debug!("♻️  Commit: {}", commit);
+        Some(commit)
+    } else {
+        let error_message = String::from_utf8_lossy(&output.stderr);
+        tracing::debug!("♻️  Failed to get Git Commit hash: {}", error_message);
+        None
+    }
+}
+/// Send a heartbeat 200 Get
+pub async fn alive(endpoint: String) -> bool {
+    let client = reqwest::Client::new();
+    match client.get(endpoint.clone()).send().await {
+        Ok(_res) => {
+            // tracing::debug!("Hearbeat Success for {}: {}", endpoint.clone(), res.status());
+            true
+        }
+        Err(e) => {
+            tracing::error!("Hearbeat Error on {}: {}", endpoint, e);
+            false
+        }
+    }
+}
+
+/// Conditional heartbeat, with a dedicated task. Not used for now.
+/// 1. Fetch Redis data size > 0
+/// 2. Assert Network status latest > 0
+pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
+    commit();
+    if config.testing {
+        tracing::info!("Testing mode, heartbeat task not spawned.");
+        return;
+    }
+    tracing::info!("Spawning heartbeat task.");
+    tokio::spawn(async move {
+        let mut hb = tokio::time::interval(Duration::from_secs(HEARTBEAT_DELAY));
+        loop {
+            hb.tick().await;
+            tracing::debug!("Heartbeat tick");
+            for (x, network) in networks.clone().iter().enumerate() {
+                match crate::getters::status(network.clone()).await {
+                    Some(data) => {
+                        if data.latest.parse::<u64>().unwrap() > 0u64 && data.stream == StreamState::Running as u128 {
+                            match config.heartbeats.get(x) {
+                                Some(endpoint) => {
+                                    let endpoint = format!("https://uptime.betterstack.com/api/v1/heartbeat/{}", endpoint.clone());
+                                    if alive(endpoint.clone()).await {
+                                        tracing::debug!("Heartbeat Success for {}: {}", network.name, endpoint.clone());
+                                    } else {
+                                        tracing::error!("Heartbeat Error for {}: {}", network.name, endpoint.clone());
+                                    }
+                                }
+                                None => {
+                                    tracing::error!("Heartbeat Error: No endpoint for network {}", network.name);
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    None => {
+                        tracing::error!("Heartbeat Error: No data for network {}", network.name);
+                        continue;
+                    }
+                }
+            }
+        }
+    });
 }

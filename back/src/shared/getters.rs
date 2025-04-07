@@ -1,10 +1,12 @@
 use tycho_orderbook::{
     data::fmt::{SrzProtocolComponent, SrzToken},
     types::Network,
-    utils::r#static::data::keys,
 };
 
-use crate::types::{PairTag, Status};
+use crate::{
+    data::data::keys,
+    types::{PairTag, Status},
+};
 
 /// Get components for a given network
 pub async fn components(network: Network) -> Option<Vec<SrzProtocolComponent>> {

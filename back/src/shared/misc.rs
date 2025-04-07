@@ -10,6 +10,7 @@ use crate::types::EnvAPIConfig;
 pub mod r#static {
     pub static HEADER_TYCHO_API_KEY: &str = "tycho-orderbook-web-api-key";
     pub static TMP_HD_VALUE: &str = "42";
+    pub static HEARTBEAT_DELAY: u64 = 900;
 }
 
 /**
@@ -72,8 +73,10 @@ impl EnvAPIConfig {
      */
     pub fn new() -> Self {
         let networks: Vec<String> = get("NETWORKS").to_lowercase().split(",").map(|s| s.to_string()).collect();
+        let heartbeats: Vec<String> = get("HEARTBEATS").to_string().split(",").map(|s| s.to_string()).collect();
         EnvAPIConfig {
             networks: networks.clone(),
+            heartbeats: heartbeats.clone(),
             origin: get("ORIGIN"),
             testing: get("TESTING") == "true",
             tycho_api_key: get("TYCHO_API_KEY"),

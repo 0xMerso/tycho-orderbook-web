@@ -10,6 +10,7 @@ use axum::response::IntoResponse;
 use http::HeaderValue;
 use serde_json::json;
 use shared::{
+    data::data::keys,
     getters,
     helpers::{prevalidation, validate_headers},
     types::{APIResponse, EnvAPIConfig, PairTag, Status, Version},
@@ -20,7 +21,7 @@ use tycho_orderbook::{
     data::fmt::{SrzProtocolComponent, SrzToken},
     maths,
     types::{ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, SharedTychoStreamState, SrzExecutionPayload, SrzTransactionRequest},
-    utils::{misc::current_timestamp, r#static::data::keys},
+    utils::misc::current_timestamp,
 };
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;

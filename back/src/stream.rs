@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use futures::StreamExt;
+use shared::data::data::keys;
 use shared::getters;
 use shared::types::EnvAPIConfig;
 use shared::types::StreamState;
@@ -16,7 +17,6 @@ use tycho_orderbook::types::OrderbookBuilderConfig;
 use tycho_orderbook::types::SharedTychoStreamState;
 use tycho_orderbook::types::TychoStreamState;
 use tycho_orderbook::utils::misc::current_timestamp;
-use tycho_orderbook::utils::r#static::data::keys;
 use tycho_orderbook::utils::r#static::filter::ADD_TVL_THRESHOLD;
 use tycho_orderbook::utils::r#static::filter::NULL_ADDRESS;
 
@@ -200,6 +200,9 @@ async fn main() {
         shared::data::set(keys::stream::latest(network.name.clone().to_string()).as_str(), 0).await;
         shared::data::ping().await;
     }
+    // --- Heartbeat
+    shared::helpers::hearbeats(networks.clone(), config.clone()).await;
+
     // --- Create a cache for the shared state, this is the key to share the state between streams and API tasks ---
     let cache: Arc<RwLock<HashMap<String, SharedTychoStreamState>>> = Arc::new(RwLock::new(HashMap::new()));
     // --- Initialize state for each network ---
