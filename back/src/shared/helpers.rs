@@ -26,6 +26,7 @@ pub async fn verify_obcache(network: Network, acps: Vec<SrzProtocolComponent>, t
                 if let Some(current) = acps.iter().find(|x| x.id.to_lowercase() == previous.id.to_lowercase()) {
                     let delta = current.last_updated_at as i64 - previous.last_updated_at as i64;
                     if delta > 0 {
+                        // Could be > 1m or 5m to save resources
                         tracing::debug!("Cp {} outdated (new: {} vs old: {} = delta {})", current.id, current.last_updated_at, previous.last_updated_at, delta);
                         return None;
                     }
@@ -166,7 +167,6 @@ pub async fn alive(endpoint: String) -> bool {
 /// 1. Fetch Redis data size > 0
 /// 2. Assert Network status latest > 0
 pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
-    commit();
     if config.testing {
         tracing::info!("Testing mode, heartbeat task not spawned.");
         return;
@@ -177,6 +177,7 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
         loop {
             hb.tick().await;
             tracing::debug!("Heartbeat tick");
+            commit();
             for (x, network) in networks.clone().iter().enumerate() {
                 match crate::getters::status(network.clone()).await {
                     Some(data) => {
