@@ -10,7 +10,7 @@ use crate::types::EnvAPIConfig;
 pub mod r#static {
     pub static HEADER_TYCHO_API_KEY: &str = "tycho-orderbook-web-api-key";
     pub static TMP_HD_VALUE: &str = "42";
-    pub static HEARTBEAT_DELAY: u64 = 10; // 900
+    pub static HEARTBEAT_DELAY: u64 = 300; // 900
 }
 
 /**

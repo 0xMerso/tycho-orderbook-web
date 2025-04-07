@@ -192,6 +192,7 @@ async fn main() {
     dotenv::from_filename(".env").ok(); // Use .env.ex for testing purposes
     let config = EnvAPIConfig::new();
     tracing::info!("Launching Tycho streams on {:?} | 🧪 Testing mode: {:?}", config.networks, config.testing);
+    shared::helpers::commit();
     let networks = tycho_orderbook::utils::r#static::networks();
     let targets = config.networks.clone();
     let networks = networks.into_iter().filter(|x| targets.contains(&x.name.to_lowercase())).collect::<Vec<Network>>();
@@ -201,8 +202,8 @@ async fn main() {
         shared::data::ping().await;
     }
     // --- Heartbeat
+    tracing::debug!("Spawning heartbeat task.");
     shared::helpers::hearbeats(networks.clone(), config.clone()).await;
-
     // --- Create a cache for the shared state, this is the key to share the state between streams and API tasks ---
     let cache: Arc<RwLock<HashMap<String, SharedTychoStreamState>>> = Arc::new(RwLock::new(HashMap::new()));
     // --- Initialize state for each network ---

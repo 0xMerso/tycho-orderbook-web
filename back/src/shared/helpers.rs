@@ -171,7 +171,6 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
         tracing::info!("Testing mode, heartbeat task not spawned.");
         return;
     }
-    tracing::info!("Spawning heartbeat task.");
     tokio::spawn(async move {
         let mut hb = tokio::time::interval(Duration::from_secs(HEARTBEAT_DELAY));
         loop {
@@ -181,6 +180,7 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
             for (x, network) in networks.clone().iter().enumerate() {
                 match crate::getters::status(network.clone()).await {
                     Some(data) => {
+                        // tracing::debug!("Heartbeat data: {:?}", data.stream);
                         if data.latest.parse::<u64>().unwrap() > 0u64 && data.stream == StreamState::Running as u128 {
                             match config.heartbeats.get(x) {
                                 Some(endpoint) => {

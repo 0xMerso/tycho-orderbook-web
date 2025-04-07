@@ -310,6 +310,7 @@ async fn orderbook(
     if let Some(e) = prevalidation(network.clone(), headers.clone(), initialised, config.web_api_key).await {
         return wrap(None, Some(e));
     }
+
     match (getters::tokens(network.clone()).await, getters::components(network.clone()).await) {
         (Some(atks), Some(acps)) => {
             let target = params.tag.clone();
@@ -384,7 +385,17 @@ async fn orderbook(
                 let unit_quote_ethworth = maths::path::quote(to_eth_ptss.clone(), atks.clone(), quote_to_eth_path.clone());
                 match (unit_base_ethworth, unit_quote_ethworth) {
                     (Some(unit_base_ethworth), Some(unit_quote_ethworth)) => {
-                        let result = book::build(network.clone(), None, ptss.clone(), targets.clone(), params.clone(), None, unit_base_ethworth, unit_quote_ethworth).await;
+                        let result = book::build(
+                            network.clone(),
+                            Some(config.tycho_api_key),
+                            ptss.clone(),
+                            targets.clone(),
+                            params.clone(),
+                            None,
+                            unit_base_ethworth,
+                            unit_quote_ethworth,
+                        )
+                        .await;
                         if !single {
                             // let path = format!("misc/data-front-v2/orderbook.{}.{}-{}.json", network.name, srzt0.symbol.to_lowercase(), srzt1.symbol.to_lowercase());
                             // crate::shd::utils::misc::save1(result.clone(), path.as_str());
