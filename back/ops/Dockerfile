@@ -44,7 +44,9 @@ RUN if [ "$BUILD_TYPE" = "release" ]; then \
     fi
 
 # Set the CMD to run the appropriate binary based on BUILD_TYPE and PROGRAM
-CMD [ "sh", "-c", "if [ \"$BUILD_TYPE\" = \"release\" ]; then ./target/release/$PROGRAM; else ./target/debug/$PROGRAM; fi" ]
+# CMD [ "sh", "-c", "if [ \"$BUILD_TYPE\" = \"release\" ]; then ./target/release/$PROGRAM; else ./target/debug/$PROGRAM; fi" ]
+CMD ["cargo", "run", "--bin", "$PROGRAM"]
+
 
 # --- DEBUG ---
 # FROM rust:slim
