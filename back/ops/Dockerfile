@@ -20,7 +20,7 @@ COPY sdk ./sdk
 
 RUN ls -la /workspace
 RUN ls -la /workspace/sdk
-RUN head -n 10 /
+RUN head -n 10 /workspace/sdk/Cargo.toml
 
 RUN cat /workspace/back/Cargo.toml
 RUN cat /workspace/sdk/Cargo.toml
