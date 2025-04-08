@@ -15,12 +15,13 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace
-# Copy both directories preserving the relative structure
 COPY back ./back
-
 COPY sdk ./sdk
 
 RUN ls -la /workspace/sdk
+RUN cat /sdk/Cargo.toml 
+RUN cat /back/Cargo.toml
+
 RUN cat /workspace/sdk/Cargo.toml 
 
 # Change working directory to 'back' so that Cargo.toml’s relative path works as expected.
