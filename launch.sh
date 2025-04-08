@@ -18,7 +18,7 @@ docker network create tycho
 docker compose config
 
 # Run
-# docker compose up --build -d
+docker compose up --build -d
 # echo "Compose  built. Following logs ..."
 # docker compose logs -f
 
