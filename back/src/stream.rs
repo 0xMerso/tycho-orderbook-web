@@ -7,7 +7,8 @@ use shared::getters;
 use shared::types::EnvAPIConfig;
 use shared::types::StreamState;
 use tokio::sync::RwLock;
-use tycho_orderbook::core::rpc;
+use tracing::Level;
+use tycho_orderbook::core::client;
 use tycho_orderbook::data::fmt::SrzProtocolComponent;
 use tycho_orderbook::data::fmt::SrzToken;
 use tycho_orderbook::types;
@@ -17,11 +18,7 @@ use tycho_orderbook::types::OrderbookBuilderConfig;
 use tycho_orderbook::types::SharedTychoStreamState;
 use tycho_orderbook::types::TychoStreamState;
 use tycho_orderbook::utils::misc::current_timestamp;
-use tycho_orderbook::utils::r#static::filter::ADD_TVL_THRESHOLD;
-use tycho_orderbook::utils::r#static::filter::NULL_ADDRESS;
-
-use tracing::Level;
-use tycho_orderbook::utils::r#static::filter::REMOVE_TVL_THRESHOLD;
+use tycho_orderbook::utils::r#static::filter;
 use tycho_simulation::tycho_client::feed::component_tracker::ComponentFilter;
 
 pub mod axum;
@@ -30,7 +27,7 @@ pub mod axum;
 async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPIConfig) {
     tracing::debug!(" 1️⃣  Launching ProtocolStreamBuilder task for {}", network.name);
     let (_, _, chain) = types::chain(network.name.clone()).expect("Invalid chain");
-    let tokens = match rpc::tokens(&network, config.tycho_api_key.clone()).await {
+    let tokens = match client::tokens(&network, config.tycho_api_key.clone()).await {
         Some(t) => t,
         None => {
             tracing::error!("Failed to get tokens. Retrying.");
@@ -48,7 +45,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
         shared::data::set(key.as_str(), srztokens.clone()).await;
         tracing::debug!("Connecting to ProtocolStreamBuilder at {} on {:?} ...", network.tycho, chain);
         let builder_config = OrderbookBuilderConfig {
-            filter: ComponentFilter::with_tvl_range(REMOVE_TVL_THRESHOLD, ADD_TVL_THRESHOLD),
+            filter: ComponentFilter::with_tvl_range(filter::REMOVE_TVL_THRESHOLD, filter::ADD_TVL_THRESHOLD),
         };
         let builder = OrderbookBuilder::new(network.clone(), config.tycho_api_key.clone(), builder_config.clone(), Some(tokens.clone())).await;
         match builder.psb.build().await {
@@ -87,7 +84,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                                 for m in targets.clone() {
                                     if let Some(_proto) = msg.states.get(&m.to_string()) {
                                         let comp = msg.new_pairs.get(&m.to_string()).expect("New pair not found");
-                                        if comp.id.to_string().contains(NULL_ADDRESS) {
+                                        if comp.id.to_string().contains(filter::NULL_ADDRESS) {
                                             tracing::debug!("Component {} has no address. Skipping.", comp.id);
                                             continue;
                                         }
@@ -181,9 +178,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
 
 pub type Cache = Arc<RwLock<HashMap<String, Arc<RwLock<TychoStreamState>>>>>;
 
-/**
- * Stream the entire state from each AMMs, with TychoStreamBuilder.
- */
+/// Stream the entire state from each AMMs, with TychoStreamBuilder.
 #[tokio::main]
 async fn main() {
     let filter = tracing_subscriber::EnvFilter::from_default_env();

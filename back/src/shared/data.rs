@@ -77,9 +77,7 @@ pub async fn ping() {
     }
 }
 
-/**
- * Connect to Redis
- */
+/// Connect to Redis
 pub async fn connect() -> Result<MultiplexedConnection, RedisError> {
     let endpoint = std::env::var("REDIS_HOST");
     let endpoint = match endpoint {
@@ -98,9 +96,7 @@ pub async fn connect() -> Result<MultiplexedConnection, RedisError> {
     }
 }
 
-/**
- * Get the status of the Redis db for a given network
- */
+/// Get the status of the Redis db for a given network
 pub async fn status(key: String) -> StreamState {
     let status = get::<u128>(key.as_str()).await;
     match status {
@@ -115,9 +111,7 @@ pub async fn status(key: String) -> StreamState {
     }
 }
 
-/**
- * Infinite waiting for the status 'Running' for a given network
- */
+/// Infinite waiting for the status 'Running' for a given network
 pub async fn wstatus(key: String, object: String) {
     let time = std::time::SystemTime::now();
     tracing::debug!("Waiting Redis Synchro");
@@ -133,9 +127,7 @@ pub async fn wstatus(key: String, object: String) {
     }
 }
 
-/**
- * Delete a JSON object from Redis
- */
+/// Delete a JSON object from Redis
 pub async fn delete(key: &str) {
     let co = connect().await;
     match co {
@@ -151,9 +143,7 @@ pub async fn delete(key: &str) {
     }
 }
 
-/**
- * Save a JSON object to Redis
- */
+/// Save a JSON object to Redis
 pub async fn set<T: Serialize>(key: &str, data: T) {
     let data = serde_json::to_string(&data);
     match data {
@@ -179,9 +169,7 @@ pub async fn set<T: Serialize>(key: &str, data: T) {
     }
 }
 
-/**
- * Get a JSON object from Redis
- */
+/// Get a JSON object from Redis
 pub async fn get<T: Serialize + DeserializeOwned>(key: &str) -> Option<T> {
     let time = std::time::SystemTime::now();
     let co = connect().await;

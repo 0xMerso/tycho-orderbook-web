@@ -11,11 +11,10 @@ pub mod r#static {
     pub static HEADER_TYCHO_API_KEY: &str = "tycho-orderbook-web-api-key";
     pub static TMP_HD_VALUE: &str = "42";
     pub static HEARTBEAT_DELAY: u64 = 300; // 900
+    pub static CACHE_OB_DURATION: u64 = 60; // If computed less than 60 seconds ago, use the cached orderbook .. even if state has changed (slightly or entirely)
 }
 
-/**
- * Read a file and return a Vec<T> where T is a deserializable type
- */
+/// Read a file and return a Vec<T> where T is a deserializable type
 pub fn read<T: DeserializeOwned>(file: &str) -> Vec<T> {
     let mut f = File::open(file).unwrap();
     let mut buffer = String::new();
@@ -24,9 +23,7 @@ pub fn read<T: DeserializeOwned>(file: &str) -> Vec<T> {
     db
 }
 
-/**
- * Write output to file
- */
+/// Write output to file
 pub fn save<T: Serialize>(output: Vec<T>, file: &str) {
     let mut file = OpenOptions::new().create(true).write(true).truncate(true).open(file).expect("Failed to open or create file");
     let json = serde_json::to_string(&output).expect("Failed to serialize JSON");
@@ -35,9 +32,7 @@ pub fn save<T: Serialize>(output: Vec<T>, file: &str) {
     file.flush().expect("Failed to flush file");
 }
 
-/**
- * Write output to file
- */
+/// Write output to file
 pub fn save1<T: Serialize>(output: T, file: &str) {
     let mut file = OpenOptions::new().create(true).write(true).truncate(true).open(file).expect("Failed to open or create file");
     let json = serde_json::to_string(&output).expect("Failed to serialize JSON");
@@ -46,9 +41,7 @@ pub fn save1<T: Serialize>(output: T, file: &str) {
     file.flush().expect("Failed to flush file");
 }
 
-/**
- * Get an environment variable
- */
+/// Get an environment variable
 pub fn get(key: &str) -> String {
     match std::env::var(key) {
         Ok(x) => x,
@@ -58,9 +51,7 @@ pub fn get(key: &str) -> String {
     }
 }
 
-/**
- * Default implementation for Env
- */
+/// Default implementation for Env
 impl Default for EnvAPIConfig {
     fn default() -> Self {
         Self::new()
@@ -68,9 +59,7 @@ impl Default for EnvAPIConfig {
 }
 
 impl EnvAPIConfig {
-    /**
-     * Create a new EnvAPIConfig
-     */
+    /// Create a new EnvAPIConfig
     pub fn new() -> Self {
         let networks: Vec<String> = get("NETWORKS").to_lowercase().split(",").map(|s| s.to_string()).collect();
         let heartbeats: Vec<String> = get("HEARTBEATS").to_string().split(",").map(|s| s.to_string()).collect();

@@ -28,10 +28,9 @@ services:
     build: 
       context: ..
       dockerfile: tycho-orderbook-web/back/ops/Dockerfile
-      # dockerfile: ops/Dockerfile
       args:
         - PROGRAM=stream
-        - BUILD_TYPE=debug  # or "debug" to build in debug mode
+        - BUILD_TYPE=debug
     ports:
       - "42042:42042"
     volumes:
@@ -42,6 +41,7 @@ services:
     env_file:
       - back/.env
     environment:
+      - RUST_LOG="off,tycho_orderbook=trace,stream=trace,shared=trace"
       - REDIS_HOST=redis
     restart: always
     networks:
