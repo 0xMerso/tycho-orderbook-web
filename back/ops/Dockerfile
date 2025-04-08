@@ -17,7 +17,10 @@ RUN apt-get update && \
 WORKDIR /workspace
 # Copy both directories preserving the relative structure
 COPY back ./back
-COPY sdk ./tycho-orderbook
+COPY sdk ./sdk
+
+COPY sdk /workspace/sdk
+
 # Change working directory to 'back' so that Cargo.toml’s relative path works as expected.
 WORKDIR /workspace/back
 
