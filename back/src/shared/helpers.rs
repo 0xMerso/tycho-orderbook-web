@@ -1,5 +1,6 @@
 use std::{collections::HashSet, process::Command, time::Duration};
 
+use alloy::network;
 use axum::http::HeaderMap;
 use tycho_orderbook::{
     data::fmt::SrzProtocolComponent,
@@ -176,12 +177,10 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
         loop {
             hb.tick().await;
             tracing::debug!("Heartbeat tick");
-            commit();
             for (x, network) in networks.clone().iter().enumerate() {
                 match crate::getters::status(network.clone()).await {
                     Some(data) => {
-                        // tracing::debug!("Heartbeat data: {:?}", data.stream);
-                        let latest = data.latest.parse::<u64>().unwrap();
+                        let latest = data.latest.parse::<u64>().unwrap_or_default();
                         if latest > 0u64 && data.stream == StreamState::Running as u128 {
                             match config.heartbeats.get(x) {
                                 Some(endpoint) => {
@@ -194,17 +193,14 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
                                 }
                                 None => {
                                     tracing::error!("Heartbeat Error: No endpoint for network {}", network.name);
-                                    continue;
                                 }
                             }
                         } else {
                             tracing::error!("Heartbeat Error: Network {}: latest = {} and StreamState = {}", network.name, latest, data.stream);
-                            continue;
                         }
                     }
                     None => {
                         tracing::error!("Heartbeat Error: No data for network {}", network.name);
-                        continue;
                     }
                 }
             }

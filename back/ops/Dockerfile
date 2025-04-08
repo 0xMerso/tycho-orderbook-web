@@ -3,8 +3,9 @@
 FROM rust:slim
 # Install required dependencies
 RUN apt-get update && apt-get install -y libssl-dev pkg-config curl
+RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 # Optional: install cargo-watch for development convenience
-RUN cargo install cargo-watch
+# RUN cargo install cargo-watch
 WORKDIR /app
 # Copy the application code
 COPY tycho-orderbook-web/back /app

@@ -182,9 +182,10 @@ pub type Cache = Arc<RwLock<HashMap<String, Arc<RwLock<TychoStreamState>>>>>;
 #[tokio::main]
 async fn main() {
     let filter = tracing_subscriber::EnvFilter::from_default_env();
-    tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init(); // <--- Set the log level here
+    tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init();
     tracing::info!("--- --- --- Launching Tycho Orderbook (streams & API) --- --- ---");
     dotenv::from_filename(".env").ok(); // Use .env.ex for testing purposes
+
     let config = EnvAPIConfig::new();
     tracing::info!("Launching Tycho streams on {:?} | 🧪 Testing mode: {:?}", config.networks, config.testing);
     shared::helpers::commit();

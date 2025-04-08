@@ -378,6 +378,8 @@ async fn orderbook(
                 if !single {
                     if let Some(cache_obk) = shared::helpers::verify_obcache(network.clone(), acps.clone(), params.tag.clone()).await {
                         return wrap(Some(cache_obk), None);
+                    } else {
+                        tracing::debug!("Orderbook not found in cache: {}", params.tag);
                     }
                 }
 
