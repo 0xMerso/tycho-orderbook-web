@@ -21,6 +21,9 @@ COPY sdk ./sdk
 
 COPY sdk /workspace/sdk
 
+RUN ls -la /workspace/sdk
+RUN cat /workspace/sdk/Cargo.toml 
+
 # Change working directory to 'back' so that Cargo.toml’s relative path works as expected.
 WORKDIR /workspace/back
 
