@@ -3,13 +3,10 @@ name = "back"
 version = "0.1.0"
 edition = "2021"
 
-# [patch.crates-io]
-# tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "662c37fd2cc7cff65407e3534584860aab184d69" }
 
 [dependencies]
-
 # tycho-orderbook = { path = "/tycho-orderbook-sdk" } # For Compose with volumes
-tycho-orderbook = { path = "../tycho-orderbook-sdk" }
+tycho-orderbook = { path = "../sdk" }
 tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "662c37fd2cc7cff65407e3534584860aab184d69" }
 
 utoipa = "5.3.1"
@@ -51,8 +48,8 @@ tracing = "0.1"
 tracing-subscriber = "0.3"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
-
 # ======================================================================================================================================================================================================
+
 [lib]
 name = "shared"
 path = "src/shared/lib.rs"
@@ -60,5 +57,3 @@ path = "src/shared/lib.rs"
 [[bin]]
 name = "stream"
 path = "src/stream.rs"
-
-# ======================================================================================================================================================================================================

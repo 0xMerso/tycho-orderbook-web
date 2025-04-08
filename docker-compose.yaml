@@ -41,7 +41,7 @@ services:
     env_file:
       - back/.env
     environment:
-      - RUST_LOG="off,tycho_orderbook-sdk=trace,stream=trace,shared=trace"
+      - RUST_LOG="off,tycho_orderbook=trace,stream=trace,shared=trace"
       - REDIS_HOST=redis
     restart: always
     networks:

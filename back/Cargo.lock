@@ -10080,3 +10080,7 @@ dependencies = [
  "once_cell",
  "simd-adler32",
 ]
+
+[[patch.unused]]
+name = "tycho-orderbook"
+version = "0.1.0"

@@ -1,6 +1,5 @@
 use std::{collections::HashSet, process::Command, time::Duration};
 
-use alloy::network;
 use axum::http::HeaderMap;
 use tycho_orderbook::{
     data::fmt::SrzProtocolComponent,
