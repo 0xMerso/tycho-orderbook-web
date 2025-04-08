@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# After cloning the repository 'git@github.com:0xMerso/tycho-orderbook-sdk.git'
+# After cloning the repository web like this
+# git clone --recurse-submodules https://github.com/0xMerso/tycho-orderbook-web web
+
 # You can execute the current script, to run the docker compose
 # It will build the SDK (not published yet on crates.io), the API and the NextJS frontend port 3000
 

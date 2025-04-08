@@ -5,10 +5,10 @@ This repository contains the architecture to run [orderbook.wtf](https://orderbo
 
 Together, they're used to visualize the onchain liquidity of AMMs in a familiar orderbook format, thanks to [Tycho](https://docs.propellerheads.xyz/tycho).  
 
-You can run the architecture with the given script:
+You can run the architecture with the given script, after cloning this repo.
 
+    git clone --recurse-submodules https://github.com/0xMerso/tycho-orderbook-web web
     sh launch.sh
-
 
 Get a visual architecture of the repository on [Gitdiagram](https://gitdiagram.com/0xMerso/tycho-orderbook-web)  
 
