@@ -102,7 +102,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                                 tracing::info!("✅ Proto Stream initialised successfully. StreamState set to 'Running' on {}", network.name.clone());
                             } else {
                                 // ===== Update Shared State =====
-                                tracing::trace!("Stream already initialised. Updating the mutex-shared state with new data, and updating Redis.");
+                                // tracing::trace!("Stream already initialised. Updating the mutex-shared state with new data, and updating Redis.");
                                 let mut components_to_update = vec![];
                                 if !msg.states.is_empty() {
                                     let mut mtx = ate.write().await;
@@ -117,7 +117,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                                 }
 
                                 if !components_to_update.is_empty() || !msg.new_pairs.is_empty() || !msg.removed_pairs.is_empty() {
-                                    tracing::trace!("Received {} new pairs, and {} pairs to be removed. Updating Redis ...", msg.new_pairs.len(), msg.removed_pairs.len());
+                                    // tracing::trace!("Received {} new pairs, and {} pairs to be removed. Updating Redis ...", msg.new_pairs.len(), msg.removed_pairs.len());
                                     match getters::components(network.clone()).await {
                                         Some(mut components) => {
                                             let timestamp = current_timestamp();
