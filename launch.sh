@@ -22,5 +22,12 @@ docker compose up --build -d
 # echo "Compose  built. Following logs ..."
 # docker compose logs -f
 
+# --- Utils ---
+
 # To stop the compose, you can use the following command
 # docker compose down
+
+# To remove the submodules
+# git submodule deinit -f path/to/submodule && git rm -f path/to/submodule && rm -rf .git/modules/path/to/submodule
+export submodule=front
+git submodule deinit -f $submodule && git rm -f $submodule && rm -rf .git/modules/$submodule
