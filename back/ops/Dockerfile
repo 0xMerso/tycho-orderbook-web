@@ -15,14 +15,14 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY back ./app
-COPY sdk ./sdk
+COPY back /app
+COPY sdk /sdk
 
 RUN ls -la /app
 RUN ls -la /app/sdk
 
-RUN cat /app/back/Cargo.toml
-RUN cat /app/sdk/Cargo.toml
+RUN cat /back/Cargo.toml
+RUN cat /sdk/Cargo.toml
 
 # Change working directory to 'back' so that Cargo.toml’s relative path works as expected.
 WORKDIR /app/back
