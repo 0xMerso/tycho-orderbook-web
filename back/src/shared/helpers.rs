@@ -2,6 +2,7 @@ use std::{collections::HashSet, process::Command, time::Duration};
 
 use axum::http::HeaderMap;
 use tycho_orderbook::{
+    core::client::get_latest_block,
     data::fmt::SrzProtocolComponent,
     types::{Network, Orderbook},
 };
@@ -137,15 +138,23 @@ pub fn generate_pair_tags(components: &[SrzProtocolComponent]) -> Vec<PairTag> {
 
 /// Get the current Git commit hash
 pub fn commit() -> Option<String> {
-    let output = Command::new("git").args(["rev-parse", "HEAD"]).output().expect("Failed to execute git command");
-    if output.status.success() {
-        let commit = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        tracing::debug!("♻️  Commit: {}", commit);
-        Some(commit)
-    } else {
-        let error_message = String::from_utf8_lossy(&output.stderr);
-        tracing::debug!("♻️  Failed to get Git Commit hash: {}", error_message);
-        None
+    let output = Command::new("git").args(["rev-parse", "HEAD"]).output();
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                let commit = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                tracing::debug!("♻️  Commit: {}", commit);
+                Some(commit)
+            } else {
+                let error_message = String::from_utf8_lossy(&output.stderr);
+                tracing::debug!("♻️  Error status to get commit hash: {}", error_message);
+                None
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to exec git rev-parse: {}", e);
+            return None;
+        }
     }
 }
 /// Send a heartbeat 200 Get
@@ -179,8 +188,11 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
             for (x, network) in networks.clone().iter().enumerate() {
                 match crate::getters::status(network.clone()).await {
                     Some(data) => {
-                        let latest = data.latest.parse::<u64>().unwrap_or_default();
-                        if latest > 0u64 && data.stream == StreamState::Running as u128 {
+                        let latest_remote = get_latest_block(network.rpc.clone()).await;
+                        let latest_local = data.latest.parse::<u64>().unwrap_or_default();
+                        let delta = latest_remote - latest_local;
+                        let is_delta_valid = delta < 25u64; // Max 25 blocks, not relevant due to block time variation between chains, to be improved
+                        if is_delta_valid && latest_local > 0u64 && data.stream == StreamState::Running as u128 {
                             match config.heartbeats.get(x) {
                                 Some(endpoint) => {
                                     let endpoint = format!("https://uptime.betterstack.com/api/v1/heartbeat/{}", endpoint.clone());
@@ -195,7 +207,13 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
                                 }
                             }
                         } else {
-                            tracing::error!("Heartbeat Error: Network {}: latest = {} and StreamState = {}", network.name, latest, data.stream);
+                            tracing::error!(
+                                "Heartbeat Error: Network {}: is_delta_valid: {}, latest = {}, StreamState = {}",
+                                network.name,
+                                is_delta_valid,
+                                latest_local,
+                                data.stream
+                            );
                         }
                     }
                     None => {

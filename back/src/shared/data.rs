@@ -20,8 +20,8 @@ pub mod data {
         pub mod stream {
 
             // stream:status:<network> => SyncState
-            pub fn tycho(network: String) -> String {
-                format!("stream:stream:{}", network.to_lowercase())
+            pub fn status(network: String) -> String {
+                format!("stream:status:{}", network.to_lowercase())
             }
 
             // stream:latest:<network> => u64

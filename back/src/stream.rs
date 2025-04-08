@@ -68,7 +68,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                             drop(mtx);
                             if !initialised {
                                 tracing::info!("First stream (= uninitialised). Writing the entire streamed data into the TychoStreamState shared struct.");
-                                shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Syncing as u128).await;
+                                shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Syncing as u128).await;
                                 // ===== Update Shared State at first sync only =====
                                 let mut targets = vec![];
                                 for (_id, comp) in msg.new_pairs.iter() {
@@ -98,7 +98,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                                 let key = keys::stream::updated(network.name.clone());
                                 shared::data::set::<Vec<String>>(key.as_str(), vec![]).await;
                                 // ===== Set StreamState to up and running =====
-                                shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Running as u128).await;
+                                shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Running as u128).await;
                                 tracing::info!("✅ Proto Stream initialised successfully. StreamState set to 'Running' on {}", network.name.clone());
                             } else {
                                 // ===== Update Shared State =====
@@ -147,7 +147,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                                         }
                                         None => {
                                             tracing::error!("Failed to get components. Exiting.");
-                                            shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Error as u128).await;
+                                            shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
                                             continue 'retry;
                                         }
                                     }
@@ -157,7 +157,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                         }
                         Err(e) => {
                             tracing::info!("🔺 Error: ProtocolStreamBuilder on {}: {:?}. Continuing.", network.name, e);
-                            shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Error as u128).await;
+                            shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
                             // ? --- Set initialised to false --- ?
                             continue;
                         }
@@ -192,10 +192,10 @@ async fn main() {
     let networks = tycho_orderbook::utils::r#static::networks();
     let targets = config.networks.clone();
     let networks = networks.into_iter().filter(|x| targets.contains(&x.name.to_lowercase())).collect::<Vec<Network>>();
+    shared::data::ping().await;
     for network in networks.clone() {
-        shared::data::set(keys::stream::tycho(network.name.clone()).as_str(), StreamState::Launching as u128).await;
+        shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Launching as u128).await;
         shared::data::set(keys::stream::latest(network.name.clone().to_string()).as_str(), 0).await;
-        shared::data::ping().await;
     }
     // --- Heartbeat
     tracing::debug!("Spawning heartbeat task.");
@@ -220,27 +220,45 @@ async fn main() {
     // --- Spawn the Axum server, one for all networks ---
     tokio::spawn(async move {
         loop {
-            tokio::time::sleep(tokio::time::Duration::from_millis(2477)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await; // Wait streams init
             axum::start(dupnets.clone(), Arc::clone(&readable), dupc.clone()).await;
+            tracing::debug!("Unexpected error occured. Restarting API");
         }
     });
-    // --- Stream for each network ---
-    for net in networks {
+
+    for network in networks {
         let config = config.clone();
-        let states_clone = Arc::clone(&cache);
+        let states = Arc::clone(&cache);
         tokio::spawn(async move {
             loop {
-                // Retrieve the shared state for this network
-                let state = {
-                    let map = states_clone.read().await;
-                    map.get(&net.name).unwrap().clone()
-                };
-                // Call your stream function with the network-specific state
-                stream(net.clone(), state, config.clone()).await;
-                tokio::time::sleep(tokio::time::Duration::from_secs(5000)).await;
+                // Spawn the network-specific stream task.
+                let task = tokio::spawn({
+                    let tasknet = network.clone();
+                    let states = Arc::clone(&states);
+                    let config = config.clone();
+                    async move {
+                        // Retrieve the shared state for this tasknetwork.
+                        let state = {
+                            let map = states.read().await;
+                            map.get(&tasknet.name).expect("State must be present").clone()
+                        };
+                        // Call the stream function.
+                        stream(tasknet, state, config).await;
+                    }
+                });
+                match task.await {
+                    Ok(_) => {
+                        tracing::debug!("Stream task for {} ended normally. Restarting...", network.name);
+                    }
+                    Err(e) => {
+                        tracing::error!("Stream task for {} panicked or was cancelled: {:?}. Restarting...", network.name, e);
+                    }
+                }
+                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
             }
         });
     }
+
     // --- Keep the program running ---
     futures::future::pending::<()>().await;
     tracing::debug!("Stream program terminated");

@@ -22,7 +22,7 @@ pub async fn tokens(network: Network) -> Option<Vec<SrzToken>> {
 
 /// Get status of the API
 pub async fn status(network: Network) -> Option<Status> {
-    let key1 = keys::stream::tycho(network.name.clone());
+    let key1 = keys::stream::status(network.name.clone());
     let key2 = keys::stream::latest(network.name.clone());
     let stream = crate::data::get::<u128>(key1.as_str()).await;
     let latest = crate::data::get::<u64>(key2.as_str()).await;
