@@ -19,8 +19,8 @@ COPY back ./back
 COPY sdk ./sdk
 
 RUN ls -la /workspace/sdk
-RUN cat /sdk/Cargo.toml 
-RUN cat /back/Cargo.toml
+RUN cat /workspace/sdk/Cargo.toml
+RUN cat /workspace/back/Cargo.toml
 
 RUN cat /workspace/sdk/Cargo.toml 
 
