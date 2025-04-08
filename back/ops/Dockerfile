@@ -10,17 +10,20 @@ RUN apt-get update && \
 # Set a workspace directory
 WORKDIR /workspace
 
-RUN echo $(ls -1 /tmp/dir)
+RUN echo $(ls -1 /tmp/x)
 
 # Copy local projects into container maintaining the relative structure
 COPY back ./back
 COPY sdk ./sdk
 
 # Optional: Print directory and file details for debugging
-RUN ls -la /workspace && \
-    ls -la /workspace/sdk && \
-    cat /workspace/back/Cargo.toml && \
-    cat /workspace/sdk/Cargo.toml
+RUN ls -la /workspace 
+RUN ls -la /workspace/sdk 
+
+RUN echo $(ls -1  /workspace/sdk)
+
+RUN cat /workspace/back/Cargo.toml 
+RUN cat /workspace/sdk/Cargo.toml
 
 # Change working directory to 'back' so that Cargo.toml’s relative path works as expected (../sdk)
 WORKDIR /workspace/back
