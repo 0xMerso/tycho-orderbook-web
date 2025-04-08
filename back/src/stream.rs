@@ -187,8 +187,8 @@ async fn main() {
     dotenv::from_filename(".env").ok(); // Use .env.ex for testing purposes
 
     let config = EnvAPIConfig::new();
-    tracing::info!("Launching Tycho streams on {:?} | 🧪 Testing mode: {:?}", config.networks, config.testing);
-    shared::helpers::commit();
+    let commit = shared::helpers::commit();
+    tracing::info!("Launching Tycho streams on {:?} | 🧪 Testing mode: {:?} | Commit: {:?}", config.networks, config.testing, commit);
     let networks = tycho_orderbook::utils::r#static::networks();
     let targets = config.networks.clone();
     let networks = networks.into_iter().filter(|x| targets.contains(&x.name.to_lowercase())).collect::<Vec<Network>>();
