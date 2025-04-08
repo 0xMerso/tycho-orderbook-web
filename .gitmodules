@@ -3,4 +3,4 @@
 	url = https://github.com/0xMerso/tycho-orderbook-sdk.git
 [submodule "front"]
 	path = front
-	url = https://github.com/fberger-xyz/orderbook-wtf
+	url = https://github.com/fberger-xyz/orderbook-wtf.git
