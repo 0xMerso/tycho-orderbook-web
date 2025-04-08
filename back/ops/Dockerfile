@@ -18,8 +18,8 @@ WORKDIR /app
 COPY back /app
 COPY sdk /sdk
 
-RUN ls -la /app
-RUN ls -la /app/sdk
+# RUN ls -la /app
+# RUN ls -la /app/sdk
 
 RUN cat /back/Cargo.toml
 RUN cat /sdk/Cargo.toml
