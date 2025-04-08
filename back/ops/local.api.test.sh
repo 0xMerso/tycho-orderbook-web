@@ -83,16 +83,15 @@ try() {
 }
 
 # Test endpoints that do not require a network
-# Test endpoints that do not require a body.
-# try "GET /" "$API_URL"
-# try "GET /version" "$API_URL/version"
-# try "GET /networks" "$API_URL/networks"
+try "GET /" "$API_URL"
+try "GET /version" "$API_URL/version"
+try "GET /networks" "$API_URL/networks"
 
 # Test endpoints that require a network
-# try "GET /$network/status" "$API_URL/$network/status"
-# try "GET /$network/tokens" "$API_URL/$network/tokens"
-# try "GET /$network/components" "$API_URL/$network/components"
-# try "GET /$network/pairs" "$API_URL/$network/pairs"
+try "GET /$network/status" "$API_URL/$network/status"
+try "GET /$network/tokens" "$API_URL/$network/tokens"
+try "GET /$network/components" "$API_URL/$network/components"
+try "GET /$network/pairs" "$API_URL/$network/pairs"
 
 # Test simulations
 try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'"}'

@@ -9,7 +9,7 @@ use tycho_orderbook::{
 use crate::{
     data::data::keys,
     getters,
-    misc::r#static::{HEADER_TYCHO_API_KEY, HEARTBEAT_DELAY},
+    misc::r#static::{CACHE_OB_DURATION, HEADER_TYCHO_API_KEY, HEARTBEAT_DELAY},
     types::{EnvAPIConfig, PairTag, StreamState},
 };
 
@@ -25,7 +25,7 @@ pub async fn verify_obcache(network: Network, acps: Vec<SrzProtocolComponent>, t
             for previous in pools {
                 if let Some(current) = acps.iter().find(|x| x.id.to_lowercase() == previous.id.to_lowercase()) {
                     let delta = current.last_updated_at as i64 - previous.last_updated_at as i64;
-                    if delta > 0 {
+                    if delta > CACHE_OB_DURATION {
                         // Could be > 1m or 5m to save resources
                         tracing::debug!("Cp {} outdated (new: {} vs old: {} = delta {})", current.id, current.last_updated_at, previous.last_updated_at, delta);
                         return None;
@@ -152,8 +152,8 @@ pub fn commit() -> Option<String> {
 pub async fn alive(endpoint: String) -> bool {
     let client = reqwest::Client::new();
     match client.get(endpoint.clone()).send().await {
-        Ok(_res) => {
-            // tracing::debug!("Hearbeat Success for {}: {}", endpoint.clone(), res.status());
+        Ok(res) => {
+            tracing::debug!("Hearbeat Success for {}: {}", endpoint.clone(), res.status());
             true
         }
         Err(e) => {
@@ -181,7 +181,8 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
                 match crate::getters::status(network.clone()).await {
                     Some(data) => {
                         // tracing::debug!("Heartbeat data: {:?}", data.stream);
-                        if data.latest.parse::<u64>().unwrap() > 0u64 && data.stream == StreamState::Running as u128 {
+                        let latest = data.latest.parse::<u64>().unwrap();
+                        if latest > 0u64 && data.stream == StreamState::Running as u128 {
                             match config.heartbeats.get(x) {
                                 Some(endpoint) => {
                                     let endpoint = format!("https://uptime.betterstack.com/api/v1/heartbeat/{}", endpoint.clone());
@@ -196,6 +197,9 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
                                     continue;
                                 }
                             }
+                        } else {
+                            tracing::error!("Heartbeat Error: Network {}: latest = {} and StreamState = {}", network.name, latest, data.stream);
+                            continue;
                         }
                     }
                     None => {

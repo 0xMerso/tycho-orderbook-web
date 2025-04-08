@@ -199,6 +199,7 @@ async fn main() {
     // --- Heartbeat
     tracing::debug!("Spawning heartbeat task.");
     shared::helpers::hearbeats(networks.clone(), config.clone()).await;
+
     // --- Create a cache for the shared state, this is the key to share the state between streams and API tasks ---
     let cache: Arc<RwLock<HashMap<String, SharedTychoStreamState>>> = Arc::new(RwLock::new(HashMap::new()));
     // --- Initialize state for each network ---
