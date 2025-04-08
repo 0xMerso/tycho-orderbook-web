@@ -14,19 +14,19 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-WORKDIR /workspace
+WORKDIR /
 COPY back ./back
 COPY sdk ./sdk
 
-RUN ls -la /workspace
-RUN ls -la /workspace/sdk
-RUN head -n 10 /workspace/sdk/Cargo.toml
+RUN ls -la 
+RUN ls -la /sdk
+RUN head -n 10 /sdk/Cargo.toml
 
-RUN cat /workspace/back/Cargo.toml
-RUN cat /workspace/sdk/Cargo.toml
+RUN cat /back/Cargo.toml
+RUN cat /sdk/Cargo.toml
 
 # Change working directory to 'back' so that Cargo.toml’s relative path works as expected.
-WORKDIR /workspace/back
+WORKDIR /back
 
 # Remove any local patch override file if present
 RUN rm -f .cargo/config.toml
