@@ -153,7 +153,7 @@ pub fn commit() -> Option<String> {
         }
         Err(e) => {
             tracing::error!("Failed to exec git rev-parse: {}", e);
-            return None;
+            None
         }
     }
 }
@@ -179,6 +179,8 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
     if config.testing {
         tracing::info!("Testing mode, heartbeat task not spawned.");
         return;
+    } else {
+        tracing::info!("Spawning heartbeat task.");
     }
     tokio::spawn(async move {
         let mut hb = tokio::time::interval(Duration::from_secs(HEARTBEAT_DELAY));

@@ -198,7 +198,6 @@ async fn main() {
         shared::data::set(keys::stream::latest(network.name.clone().to_string()).as_str(), 0).await;
     }
     // --- Heartbeat
-    tracing::debug!("Spawning heartbeat task.");
     shared::helpers::hearbeats(networks.clone(), config.clone()).await;
 
     // --- Create a cache for the shared state, this is the key to share the state between streams and API tasks ---
@@ -226,6 +225,7 @@ async fn main() {
         }
     });
 
+    tracing::debug!("Spawning supervisor task, for network streams");
     for network in networks {
         let config = config.clone();
         let states = Arc::clone(&cache);
