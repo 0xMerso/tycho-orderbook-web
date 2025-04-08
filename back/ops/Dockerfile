@@ -17,9 +17,8 @@ RUN apt-get update && \
 WORKDIR /workspace
 # Copy both directories preserving the relative structure
 COPY back ./back
-COPY sdk ./sdk
 
-COPY sdk /workspace/sdk
+COPY sdk ./sdk
 
 RUN ls -la /workspace/sdk
 RUN cat /workspace/sdk/Cargo.toml 
