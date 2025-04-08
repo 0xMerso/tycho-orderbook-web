@@ -1,8 +1,16 @@
 FROM rust:slim
 # Install required dependencies
 RUN apt-get update && apt-get install -y libssl-dev pkg-config curl git && rm -rf /var/lib/apt/lists/*
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    git \
+    build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
