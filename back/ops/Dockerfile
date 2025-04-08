@@ -7,9 +7,15 @@ RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
 # Optional: install cargo-watch for development convenience
 # RUN cargo install cargo-watch
 WORKDIR /app
+
+
 # Copy the application code
-COPY tycho-orderbook-web/back /app
-COPY tycho-orderbook-sdk /tycho-orderbook-sdk
+# COPY tycho-orderbook-web/back /app
+# COPY tycho-orderbook-sdk /tycho-orderbook-sdk
+COPY back /app
+COPY sdk /tycho-orderbook-sdk
+
+
 # Remove any local patch override file
 RUN rm -f .cargo/config.toml
 # Accept build arguments for build type and program name; set defaults

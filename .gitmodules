@@ -1,3 +1,6 @@
 [submodule "front"]
 	path = front
 	url = git@github.com-merso:fberger-xyz/tycho-orderbook-front.git
+[submodule "sdk"]
+	path = sdk
+	url = https://github.com/0xMerso/tycho-orderbook-sdk.git
