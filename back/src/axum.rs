@@ -17,10 +17,10 @@ use shared::{
 };
 use tower_http::cors::{Any, CorsLayer};
 use tycho_orderbook::{
-    core::{book, exec},
+    core::{book, exec, helper::get_original_components, solver::DefaultOrderbookSolver},
     data::fmt::{SrzProtocolComponent, SrzToken},
     maths,
-    types::{ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoTychoState, SharedTychoStreamState, SrzExecutionPayload, SrzTransactionRequest},
+    types::{ExecutionRequest, Network, Orderbook, OrderbookRequestParams, ProtoSimComp, SharedTychoStreamState, SrzExecutionPayload, SrzTransactionRequest},
     utils::misc::current_timestamp,
 };
 use utoipa::OpenApi;
@@ -264,9 +264,8 @@ async fn execute(
     let mtx = state.read().await;
     let originals = mtx.components.clone();
     drop(mtx);
-    let originals = exec::get_original_components(originals, execution.components.clone());
-
-    match exec::build(network.clone(), execution.clone(), originals, None).await {
+    let originals = get_original_components(originals, execution.components.clone());
+    match exec::create(network.clone(), execution.clone(), originals, None).await {
         Ok(result) => {
             let srz = SrzExecutionPayload {
                 swap: SrzTransactionRequest::from(result.swap.clone()),
@@ -329,105 +328,126 @@ async fn orderbook(
             let srzt0 = srzt0.unwrap();
             let srzt1 = srzt1.unwrap();
             let targets = vec![srzt0.clone(), srzt1.clone()];
-            let (base_to_eth_path, base_to_eth_comps) = maths::path::routing(acps.clone(), srzt0.address.to_string().to_lowercase(), network.eth.to_lowercase()).unwrap_or_default();
-            let (quote_to_eth_path, quote_to_eth_comps) = maths::path::routing(acps.clone(), srzt1.address.to_string().to_lowercase(), network.eth.to_lowercase()).unwrap_or_default();
-            // tracing::info!("Path from {} to network.ETH is {:?}", srzt0.symbol, base_to_eth_path);
-            if targets.len() == 2 {
-                let mut ptss: Vec<ProtoTychoState> = vec![];
-                let mut to_eth_ptss: Vec<ProtoTychoState> = vec![];
-                for cp in acps.clone() {
-                    let cptks = cp.tokens.clone();
-                    if book::matchcp(cptks.clone(), targets.clone()) {
-                        let mtx = shtss.read().await;
-                        match mtx.protosims.get(&cp.id.to_lowercase()) {
-                            Some(protosim) => {
-                                ptss.push(ProtoTychoState {
-                                    component: cp.clone(),
-                                    protosim: protosim.clone(),
-                                });
+
+            let base_to_eth = maths::path::routing(acps.clone(), srzt0.address.to_string().to_lowercase(), network.eth.to_lowercase());
+            let quote_to_eth = maths::path::routing(acps.clone(), srzt1.address.to_string().to_lowercase(), network.eth.to_lowercase());
+            match (base_to_eth, quote_to_eth) {
+                (Ok(base_to_eth), Ok(quote_to_eth)) => {
+                    // tracing::info!("Path from {} to network.ETH is {:?}", srzt0.symbol, base_to_eth_path);
+                    if targets.len() == 2 {
+                        let mut ptss: Vec<ProtoSimComp> = vec![];
+                        let mut to_eth_ptss: Vec<ProtoSimComp> = vec![];
+                        for cp in acps.clone() {
+                            let cptks = cp.tokens.clone();
+                            if book::matchcp(cptks.clone(), targets.clone()) {
+                                let mtx = shtss.read().await;
+                                match mtx.protosims.get(&cp.id.to_lowercase()) {
+                                    Some(protosim) => {
+                                        ptss.push(ProtoSimComp {
+                                            component: cp.clone(),
+                                            protosim: protosim.clone(),
+                                        });
+                                    }
+                                    None => {
+                                        tracing::error!("matchcp: couldn't find protosim for component {}", cp.id);
+                                    }
+                                }
+                                drop(mtx);
                             }
-                            None => {
-                                tracing::error!("matchcp: couldn't find protosim for component {}", cp.id);
+                            if base_to_eth.comp_path.contains(&cp.id.to_lowercase()) || quote_to_eth.comp_path.contains(&cp.id.to_lowercase()) {
+                                let mtx = shtss.read().await;
+                                match mtx.protosims.get(&cp.id.to_lowercase()) {
+                                    Some(protosim) => {
+                                        to_eth_ptss.push(ProtoSimComp {
+                                            component: cp.clone(),
+                                            protosim: protosim.clone(),
+                                        });
+                                    }
+                                    None => {
+                                        tracing::error!("contains: couldn't find protosim for component {}", cp.id);
+                                    }
+                                }
+                                drop(mtx);
                             }
                         }
-                        drop(mtx);
-                    }
-                    if base_to_eth_comps.contains(&cp.id.to_lowercase()) || quote_to_eth_comps.contains(&cp.id.to_lowercase()) {
-                        let mtx = shtss.read().await;
-                        match mtx.protosims.get(&cp.id.to_lowercase()) {
-                            Some(protosim) => {
-                                to_eth_ptss.push(ProtoTychoState {
-                                    component: cp.clone(),
-                                    protosim: protosim.clone(),
-                                });
-                            }
-                            None => {
-                                tracing::error!("contains: couldn't find protosim for component {}", cp.id);
-                            }
+
+                        if ptss.is_empty() {
+                            let tag = format!("{}-{}", srzt0.symbol.to_lowercase(), srzt1.symbol.to_lowercase());
+                            let msg = format!("ProtoSimComp: pair {} requested has 0 associated pools and multi-hop is not enabled yet.", tag);
+                            return wrap(None, Some(msg));
                         }
-                        drop(mtx);
-                    }
-                }
 
-                if ptss.is_empty() {
-                    let tag = format!("{}-{}", srzt0.symbol.to_lowercase(), srzt1.symbol.to_lowercase());
-                    let msg = format!("ProtoTychoState: pair {} requested has 0 associated pools and multi-hop is not enabled yet.", tag);
-                    return wrap(None, Some(msg));
-                }
-
-                if !single {
-                    if let Some(cache_obk) = shared::helpers::verify_obcache(network.clone(), acps.clone(), params.tag.clone()).await {
-                        return wrap(Some(cache_obk), None);
-                    } else {
-                        tracing::debug!("Orderbook not found in cache: {}", params.tag);
-                    }
-                }
-
-                let unit_base_ethworth = maths::path::quote(to_eth_ptss.clone(), atks.clone(), base_to_eth_path.clone());
-                let unit_quote_ethworth = maths::path::quote(to_eth_ptss.clone(), atks.clone(), quote_to_eth_path.clone());
-                match (unit_base_ethworth, unit_quote_ethworth) {
-                    (Some(unit_base_ethworth), Some(unit_quote_ethworth)) => {
-                        let result = book::build(
-                            network.clone(),
-                            Some(config.tycho_api_key),
-                            ptss.clone(),
-                            targets.clone(),
-                            params.clone(),
-                            None,
-                            unit_base_ethworth,
-                            unit_quote_ethworth,
-                        )
-                        .await;
                         if !single {
-                            // let path = format!("misc/data-front-v2/orderbook.{}.{}-{}.json", network.name, srzt0.symbol.to_lowercase(), srzt1.symbol.to_lowercase());
-                            // crate::shd::utils::misc::save1(result.clone(), path.as_str());
-                            // Save Redis cache
-                            let tag = format!("{}-{}", result.base.address.to_lowercase(), result.quote.address.to_lowercase());
-                            let key = keys::stream::orderbook(network.name.clone(), tag);
-                            tracing::info!("Saving orderbook to Redis cache with key: {}", key);
-                            shared::data::set(key.as_str(), result.clone()).await;
+                            if let Some(cache_obk) = shared::helpers::verify_obcache(network.clone(), acps.clone(), params.tag.clone()).await {
+                                return wrap(Some(cache_obk), None);
+                            } else {
+                                tracing::debug!("Orderbook not found in cache: {}", params.tag);
+                            }
                         }
-                        wrap(Some(result), None)
-                    }
-                    _ => {
-                        let msg = format!("Couldn't find the quote path from {} to ETH", srzt0.symbol);
+
+                        let unit_base_ethworth = maths::path::quote(to_eth_ptss.clone(), atks.clone(), base_to_eth.token_path.clone());
+                        let unit_quote_ethworth = maths::path::quote(to_eth_ptss.clone(), atks.clone(), quote_to_eth.token_path.clone());
+                        match (unit_base_ethworth, unit_quote_ethworth) {
+                            (Some(unit_base_ethworth), Some(unit_quote_ethworth)) => {
+                                match book::build(
+                                    DefaultOrderbookSolver,
+                                    network.clone(),
+                                    Some(config.tycho_api_key),
+                                    ptss.clone(),
+                                    targets.clone(),
+                                    params.clone(),
+                                    unit_base_ethworth,
+                                    unit_quote_ethworth,
+                                )
+                                .await
+                                {
+                                    Ok(result) => {
+                                        if !single {
+                                            let tag = format!("{}-{}", result.base.address.to_lowercase(), result.quote.address.to_lowercase());
+                                            let key = keys::stream::orderbook(network.name.clone(), tag);
+                                            tracing::info!("Saving orderbook to Redis cache with key: {}", key);
+                                            shared::data::set(key.as_str(), result.clone()).await;
+                                        }
+                                        wrap(Some(result), None)
+                                    }
+                                    Err(e) => {
+                                        let msg = format!("Couldn't build the orderbook: {}", e);
+                                        tracing::error!("{}", msg);
+                                        return wrap(None, Some(msg));
+                                    }
+                                }
+                            }
+                            _ => {
+                                let msg = format!("Couldn't find the quote path from {} to ETH", srzt0.symbol);
+                                tracing::error!("{}", msg);
+                                wrap(None, Some(msg))
+                            }
+                        }
+                    } else {
+                        let msg = format!(
+                            "Couldn't find the pair of tokens for tag {} - Query param Tag must contain only 2 tokens separated by a dash '-'",
+                            target
+                        );
                         tracing::error!("{}", msg);
                         wrap(None, Some(msg))
                     }
                 }
-            } else {
-                let msg = format!(
-                    "Couldn't find the pair of tokens for tag {} - Query param Tag must contain only 2 tokens separated by a dash '-'",
-                    target
-                );
-                tracing::error!("{}", msg);
-                wrap(None, Some(msg))
+                _ => {
+                    let msg = "Routing failed: couldn't find the path from token to ETH".to_string();
+                    tracing::error!("{}", msg);
+                    wrap(None, Some(msg.to_string()))
+                }
             }
         }
-        _ => {
-            let msg = "Couldn't not read internal components";
+        (None, _) => {
+            let msg = format!("Couldn't get tokens.");
             tracing::error!("{}", msg);
-            wrap(None, Some(msg.to_string()))
+            wrap(None, Some(msg))
+        }
+        (_, None) => {
+            let msg = format!("Couldn't get components.");
+            tracing::error!("{}", msg);
+            wrap(None, Some(msg))
         }
     }
 }

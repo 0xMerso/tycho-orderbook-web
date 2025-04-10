@@ -5,8 +5,8 @@ edition = "2021"
 
 
 [dependencies]
-# tycho-orderbook = { path = "/tycho-orderbook-sdk" } # For Compose with volumes
-tycho-orderbook = { path = "../sdk" }
+tycho-orderbook = { path = "../../tycho-orderbook-sdk" } # For Compose with volumes
+# tycho-orderbook = { path = "../sdk" }
 tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "662c37fd2cc7cff65407e3534584860aab184d69" }
 
 utoipa = "5.3.1"

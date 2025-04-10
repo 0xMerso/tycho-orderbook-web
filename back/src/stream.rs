@@ -8,13 +8,14 @@ use shared::types::EnvAPIConfig;
 use shared::types::StreamState;
 use tokio::sync::RwLock;
 use tracing::Level;
+use tycho_orderbook::builder::OrderbookBuilder;
+use tycho_orderbook::builder::OrderbookBuilderConfig;
 use tycho_orderbook::core::client;
+use tycho_orderbook::core::helper::default_protocol_stream_builder;
 use tycho_orderbook::data::fmt::SrzProtocolComponent;
 use tycho_orderbook::data::fmt::SrzToken;
 use tycho_orderbook::types;
 use tycho_orderbook::types::Network;
-use tycho_orderbook::types::OrderbookBuilder;
-use tycho_orderbook::types::OrderbookBuilderConfig;
 use tycho_orderbook::types::SharedTychoStreamState;
 use tycho_orderbook::types::TychoStreamState;
 use tycho_orderbook::utils::misc::current_timestamp;
@@ -24,7 +25,7 @@ use tycho_simulation::tycho_client::feed::component_tracker::ComponentFilter;
 pub mod axum;
 
 /// Stream the entire state from each AMMs, with TychoStreamBuilder.
-async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPIConfig) {
+async fn stream(network: Network, shared_state: SharedTychoStreamState, config: EnvAPIConfig) {
     tracing::debug!(" 1️⃣  Launching ProtocolStreamBuilder task for {}", network.name);
     let (_, _, chain) = types::chain(network.name.clone()).expect("Invalid chain");
     let tokens = match client::tokens(&network, config.tycho_api_key.clone()).await {
@@ -43,11 +44,13 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
     'retry: loop {
         let key = keys::stream::tokens(network.name.clone());
         shared::data::set(key.as_str(), srztokens.clone()).await;
-        tracing::debug!("Connecting to ProtocolStreamBuilder at {} on {:?} ...", network.tycho, chain);
+        tracing::debug!("(re) Connecting to ProtocolStreamBuilder at {} on {:?} ...", network.tycho, chain);
         let builder_config = OrderbookBuilderConfig {
             filter: ComponentFilter::with_tvl_range(filter::REMOVE_TVL_THRESHOLD, filter::ADD_TVL_THRESHOLD),
         };
-        let builder = OrderbookBuilder::new(network.clone(), config.tycho_api_key.clone(), builder_config.clone(), Some(tokens.clone())).await;
+        let psb = default_protocol_stream_builder(network.clone(), config.tycho_api_key.clone(), builder_config.clone(), tokens.clone()).await;
+        let builder = OrderbookBuilder::new(network.clone(), psb, config.tycho_api_key.clone(), tokens.clone());
+        // The API dont use the orderbook-provider stream for now
         match builder.psb.build().await {
             Ok(mut stream) => {
                 while let Some(msg) = stream.next().await {
@@ -63,7 +66,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                                 msg.removed_pairs.len()
                             );
                             shared::data::set(keys::stream::latest(network.name.clone()).as_str(), msg.block_number).await;
-                            let mtx = ate.read().await;
+                            let mtx = shared_state.read().await;
                             let initialised = mtx.initialised;
                             drop(mtx);
                             if !initialised {
@@ -74,7 +77,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                                 for (_id, comp) in msg.new_pairs.iter() {
                                     targets.push(comp.id.to_string().to_lowercase());
                                 }
-                                let mut mtx = ate.write().await;
+                                let mut mtx = shared_state.write().await;
                                 mtx.protosims = msg.states.clone();
                                 mtx.components = msg.new_pairs.clone();
                                 mtx.initialised = true;
@@ -105,7 +108,7 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
                                 // tracing::trace!("Stream already initialised. Updating the mutex-shared state with new data, and updating Redis.");
                                 let mut components_to_update = vec![];
                                 if !msg.states.is_empty() {
-                                    let mut mtx = ate.write().await;
+                                    let mut mtx = shared_state.write().await;
                                     let cpids = msg.states.keys().map(|x| x.clone().to_lowercase()).collect::<Vec<String>>();
                                     for x in msg.states.iter() {
                                         mtx.protosims.insert(x.0.clone().to_lowercase(), x.1.clone());
@@ -167,9 +170,9 @@ async fn stream(network: Network, ate: SharedTychoStreamState, config: EnvAPICon
             Err(e) => {
                 tracing::warn!(
                     "Failed to create stream: {:?}. Wait a few minutes. You can try again by changing the Tycho Stream filters, or with a dedicated API key.",
-                    e.to_string()
+                    e.to_string() // BlockSynchronizer error: Fatal error: 503 Service Temporarily Unavailable
                 );
-                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
                 continue 'retry;
             }
         }
@@ -199,6 +202,7 @@ async fn main() {
     }
     // --- Heartbeat
     shared::helpers::hearbeats(networks.clone(), config.clone()).await;
+    // ! Idea: put that in main thread, and panic to restart docker if error ?
 
     // --- Create a cache for the shared state, this is the key to share the state between streams and API tasks ---
     let cache: Arc<RwLock<HashMap<String, SharedTychoStreamState>>> = Arc::new(RwLock::new(HashMap::new()));
