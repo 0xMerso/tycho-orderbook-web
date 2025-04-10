@@ -412,7 +412,7 @@ async fn orderbook(
                                     Err(e) => {
                                         let msg = format!("Couldn't build the orderbook: {}", e);
                                         tracing::error!("{}", msg);
-                                        return wrap(None, Some(msg));
+                                        wrap(None, Some(msg))
                                     }
                                 }
                             }
@@ -439,12 +439,12 @@ async fn orderbook(
             }
         }
         (None, _) => {
-            let msg = format!("Couldn't get tokens.");
+            let msg = "Couldn't get tokens.".to_string();
             tracing::error!("{}", msg);
             wrap(None, Some(msg))
         }
         (_, None) => {
-            let msg = format!("Couldn't get components.");
+            let msg = "Couldn't get components.".to_string();
             tracing::error!("{}", msg);
             wrap(None, Some(msg))
         }
