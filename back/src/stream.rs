@@ -4,6 +4,7 @@ use std::sync::Arc;
 use futures::StreamExt;
 use shared::data::data::keys;
 use shared::getters;
+use shared::misc::r#static::RESTART_STREAM_DELAY;
 use shared::types::EnvAPIConfig;
 use shared::types::StreamState;
 use tokio::sync::RwLock;
@@ -20,28 +21,22 @@ use tycho_orderbook::types::SharedTychoStreamState;
 use tycho_orderbook::types::TychoStreamState;
 use tycho_orderbook::utils::misc::current_timestamp;
 use tycho_orderbook::utils::r#static::filter;
+use tycho_simulation::models::Token;
 use tycho_simulation::tycho_client::feed::component_tracker::ComponentFilter;
 
 pub mod axum;
 
 /// Stream the entire state from each AMMs, with TychoStreamBuilder.
-async fn stream(network: Network, shared_state: SharedTychoStreamState, config: EnvAPIConfig) {
-    tracing::debug!(" 1️⃣  Launching ProtocolStreamBuilder task for {}", network.name);
+async fn stream(network: Network, shared_state: SharedTychoStreamState, config: EnvAPIConfig, tokens: Vec<Token>) {
+    tracing::debug!("1️⃣  Launching ProtocolStreamBuilder task for {} with {} tokens", network.name, tokens.len());
     let (_, _, chain) = types::chain(network.name.clone()).expect("Invalid chain");
-    let tokens = match client::tokens(&network, config.tycho_api_key.clone()).await {
-        Some(t) => t,
-        None => {
-            tracing::error!("Failed to get tokens. Retrying.");
-            return;
-        }
-    };
     let mut hmt = HashMap::new();
     tokens.iter().for_each(|t| {
         hmt.insert(t.address.clone(), t.clone());
     });
     let srztokens = tokens.clone().iter().map(|t| SrzToken::from(t.clone())).collect::<Vec<SrzToken>>();
     tracing::debug!("Fetched {} tokens from Tycho Client", hmt.len());
-    'retry: loop {
+    loop {
         let key = keys::stream::tokens(network.name.clone());
         shared::data::set(key.as_str(), srztokens.clone()).await;
         tracing::debug!("(re) Connecting to ProtocolStreamBuilder at {} on {:?} ...", network.tycho, chain);
@@ -151,7 +146,6 @@ async fn stream(network: Network, shared_state: SharedTychoStreamState, config: 
                                         None => {
                                             tracing::error!("Failed to get components. Exiting.");
                                             shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
-                                            continue 'retry;
                                         }
                                     }
                                 }
@@ -161,8 +155,6 @@ async fn stream(network: Network, shared_state: SharedTychoStreamState, config: 
                         Err(e) => {
                             tracing::info!("🔺 Error: ProtocolStreamBuilder on {}: {:?}. Continuing.", network.name, e);
                             shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
-                            // ? --- Set initialised to false --- ?
-                            continue;
                         }
                     };
                 }
@@ -173,7 +165,6 @@ async fn stream(network: Network, shared_state: SharedTychoStreamState, config: 
                     e.to_string() // BlockSynchronizer error: Fatal error: 503 Service Temporarily Unavailable
                 );
                 tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
-                continue 'retry;
             }
         }
     }
@@ -233,21 +224,29 @@ async fn main() {
     for network in networks {
         let config = config.clone();
         let states = Arc::clone(&cache);
+        let tokens = match client::tokens(&network, config.tycho_api_key.clone()).await {
+            Some(t) => t,
+            None => {
+                tracing::error!("Failed to get tokens");
+                continue;
+            }
+        };
         tokio::spawn(async move {
             loop {
                 // Spawn the network-specific stream task.
                 let task = tokio::spawn({
-                    let tasknet = network.clone();
+                    let task_network = network.clone();
+                    let task_tokens = tokens.clone();
                     let states = Arc::clone(&states);
                     let config = config.clone();
                     async move {
-                        // Retrieve the shared state for this tasknetwork.
+                        // Retrieve the shared state for this task_networkwork.
                         let state = {
                             let map = states.read().await;
-                            map.get(&tasknet.name).expect("State must be present").clone()
+                            map.get(&task_network.name).expect("State must be present").clone()
                         };
                         // Call the stream function.
-                        stream(tasknet, state, config).await;
+                        stream(task_network, state, config, task_tokens.clone()).await;
                     }
                 });
                 match task.await {
@@ -258,7 +257,8 @@ async fn main() {
                         tracing::error!("Stream task for {} panicked or was cancelled: {:?}. Restarting...", network.name, e);
                     }
                 }
-                tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+                tracing::debug!("🔺 Task failed. Waiting {} seconds before restarting the stream task for {}", RESTART_STREAM_DELAY, network.name);
+                tokio::time::sleep(tokio::time::Duration::from_secs(RESTART_STREAM_DELAY)).await;
             }
         });
     }
