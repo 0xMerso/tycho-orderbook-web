@@ -328,7 +328,6 @@ async fn orderbook(
             let srzt0 = srzt0.unwrap();
             let srzt1 = srzt1.unwrap();
             let targets = vec![srzt0.clone(), srzt1.clone()];
-
             let base_to_eth = maths::path::routing(acps.clone(), srzt0.address.to_string().to_lowercase(), network.eth.to_lowercase());
             let quote_to_eth = maths::path::routing(acps.clone(), srzt1.address.to_string().to_lowercase(), network.eth.to_lowercase());
             match (base_to_eth, quote_to_eth) {
