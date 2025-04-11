@@ -49,28 +49,28 @@ services:
 
 # --- --- --- Frontend --- --- ---
 
-  web:
-    build:
-      context: ./front/front
-      dockerfile: ops/Dockerfile
-      # Need to add RUN corepack enable && corepack prepare pnpm@latest --activate
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./front/front:/app
-      - node_modules:/app/node_modules
-    command: pnpm dev
-    environment:
-      - NEXT_PUBLIC_STREAM_API_URL=http://stream:42042
-      - NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=572586a808fa0462edb485f181680943
-      - API_HEADER_KEY=tycho-orderbook-web-api-key
-      - API_HEADER_VALUE=42
-      - APP_METADATA_SITE_URL=
-    depends_on:
-      - stream
-    restart: always
-    networks:
-      - tycho
+#   next:
+#     build:
+#       context: ./front/front
+#       dockerfile: ops/Dockerfile
+#       # Need to add RUN corepack enable && corepack prepare pnpm@latest --activate
+#     ports:
+#       - "3000:3000"
+#     volumes:
+#       - ./front/front:/app
+#       - node_modules:/app/node_modules
+#     command: pnpm dev
+#     environment:
+#       - NEXT_PUBLIC_STREAM_API_URL=http://stream:42042
+#       - NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=572586a808fa0462edb485f181680943
+#       - API_HEADER_KEY=tycho-orderbook-web-api-key
+#       - API_HEADER_VALUE=42
+#       - APP_METADATA_SITE_URL=
+#     depends_on:
+#       - stream
+#     restart: always
+#     networks:
+#       - tycho
 
-volumes:
-  node_modules:
+# volumes:
+#   node_modules:
