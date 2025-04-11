@@ -454,7 +454,7 @@ async fn orderbook(
 pub async fn start(nets: Vec<Network>, shared: crate::Cache, config: EnvAPIConfig) {
     let port = config.api_port.parse::<u16>().unwrap_or(42042);
     let names = nets.clone().iter().map(|n| n.name.clone()).collect::<Vec<String>>();
-    tracing::info!("👾 Launching API for '{:?}' network | 🧪 Testing mode: {:?} | Port: {}", names, config.testing, port);
+    tracing::info!("👾 Launching API for '{:?}' networks | 🧪 Testing mode: {:?} | Port: {}", names, config.testing, port);
     // --- CORS ---
     let _cors = match config.testing {
         true => {
