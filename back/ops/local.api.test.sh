@@ -115,5 +115,5 @@ try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag
 # try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$wbtc-$dai"'", "point": {"input": "'"$wbtc"'", "amount": 1}}'
 # try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$wbtc-$usdt"'", "point": {"input": "'"$wbtc"'", "amount": 1}}'
 
-usdp="0x8e870d67f660d95d5be530380d0ec0bd388289e1" # Trying when no orderbook available
-try "POST /orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdp"'"}'
+# usdp="0x8e870d67f660d95d5be530380d0ec0bd388289e1" # Trying when no orderbook available
+# try "POST /orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdp"'"}'
