@@ -36,7 +36,7 @@ async fn stream(network: Network, shared_state: SharedTychoStreamState, config: 
     });
     let srztokens = tokens.clone().iter().map(|t| SrzToken::from(t.clone())).collect::<Vec<SrzToken>>();
     tracing::debug!("Fetched {} tokens from Tycho Client", hmt.len());
-    loop {
+    'retry: loop {
         let key = keys::stream::tokens(network.name.clone());
         shared::data::set(key.as_str(), srztokens.clone()).await;
         tracing::debug!("(re) Connecting to ProtocolStreamBuilder at {} on {:?} ...", network.tycho, chain);
@@ -145,26 +145,30 @@ async fn stream(network: Network, shared_state: SharedTychoStreamState, config: 
                                         }
                                         None => {
                                             tracing::error!("Failed to get components. Exiting.");
-                                            shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
                                         }
                                     }
                                 }
+                                shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Running as u128).await;
                             }
                             // tracing::info!("--------- Done for {} --------- ", network.name.clone());
                         }
                         Err(e) => {
-                            tracing::info!("🔺 Error: ProtocolStreamBuilder on {}: {:?}. Continuing.", network.name, e);
+                            tracing::warn!("🔺 Error receiving BlockUpdate from stream on {}: {:?}. Waiting and continuing.", network.name, e);
                             shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
+                            continue 'retry;
                         }
                     };
                 }
+                tracing::warn!("Stream ended, it should not happend. Restarting...");
             }
             Err(e) => {
                 tracing::warn!(
-                    "Failed to create stream: {:?}. Wait a few minutes. You can try again by changing the Tycho Stream filters, or with a dedicated API key.",
+                    "Failed to build stream: {:?}. Waiting a few seconds to retry. You can try again by changing the Tycho Stream filters, or with a dedicated API key.",
                     e.to_string() // BlockSynchronizer error: Fatal error: 503 Service Temporarily Unavailable
                 );
+                shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
                 tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+                continue 'retry;
             }
         }
     }
