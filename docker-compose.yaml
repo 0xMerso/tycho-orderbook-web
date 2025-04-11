@@ -51,7 +51,7 @@ services:
 
   web:
     build:
-      context: .
+      context: front/front
       dockerfile: front/front/ops/Dockerfile
       # Need to add RUN corepack enable && corepack prepare pnpm@latest --activate
     ports:
