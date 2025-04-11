@@ -51,13 +51,13 @@ services:
 
   web:
     build:
-      context: front/front
-      dockerfile: front/front/ops/Dockerfile
+      context: ./front/front
+      dockerfile: ops/Dockerfile
       # Need to add RUN corepack enable && corepack prepare pnpm@latest --activate
     ports:
       - "3000:3000"
     volumes:
-      - ./front:/app
+      - ./front/front:/app
       - node_modules:/app/node_modules
     command: pnpm dev
     environment:
