@@ -92,7 +92,7 @@ async fn stream(network: Network, cache: SharedTychoStreamState, config: EnvAPIC
                             }
                         }
                         // ===== Storing ALL components =====
-                        tracing::debug!("Storing {} components", components.len());
+                        tracing::debug!("Storing {} components on {}", components.len(), network.name);
                         let key = keys::stream::components(network.name.clone());
                         shared::data::set(key.as_str(), components.clone()).await;
                         let key = keys::stream::updated(network.name.clone());
@@ -150,7 +150,7 @@ async fn stream(network: Network, cache: SharedTychoStreamState, config: EnvAPIC
                     }
                 }
                 Err(e) => {
-                    tracing::warn!("Error receiving BlockUpdate from stream on {}: {:?}. Continuing.", network.name, e);
+                    tracing::warn!("Error receiving BlockUpdate from stream on {}: {:?}.", network.name, e);
                     shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
                 }
             };
