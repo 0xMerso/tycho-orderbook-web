@@ -1,10 +1,7 @@
 use futures::FutureExt;
 use std::collections::HashMap;
-use std::hash::Hash;
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
-use tycho_orderbook::core::client::build_tycho_client;
-use tycho_simulation::tycho_client::HttpRPCClient;
 
 use futures::StreamExt;
 use shared::data::data::keys;
@@ -13,7 +10,6 @@ use shared::misc::r#static::RESTART_STREAM_DELAY;
 use shared::types::EnvAPIConfig;
 use shared::types::StreamState;
 use tokio::sync::RwLock;
-use tracing::Level;
 use tycho_orderbook::builder::OrderbookBuilder;
 use tycho_orderbook::builder::OrderbookBuilderConfig;
 use tycho_orderbook::core::client;
