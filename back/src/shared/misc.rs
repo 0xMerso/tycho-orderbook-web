@@ -12,7 +12,7 @@ pub mod r#static {
     pub static TMP_HD_VALUE: &str = "42";
     pub static HEARTBEAT_DELAY: u64 = 300; // 900
     pub static CACHE_OB_DURATION: i64 = 60; // If computed less than 60 seconds ago, use the cached orderbook .. even if state has changed (slightly or entirely)
-    pub static RESTART_STREAM_DELAY: u64 = 60; // If computed less than 60 seconds ago, use the cached orderbook .. even if state has changed (slightly or entirely)
+    pub static RESTART_STREAM_DELAY: u64 = 7; // If computed less than 60 seconds ago, use the cached orderbook .. even if state has changed (slightly or entirely)
 }
 
 /// Read a file and return a Vec<T> where T is a deserializable type

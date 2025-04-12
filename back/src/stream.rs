@@ -1,7 +1,10 @@
 use futures::FutureExt;
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
+use tycho_orderbook::core::client::build_tycho_client;
+use tycho_simulation::tycho_client::HttpRPCClient;
 
 use futures::StreamExt;
 use shared::data::data::keys;
@@ -29,13 +32,13 @@ pub mod axum;
 
 /// Stream the entire state from each AMMs, with TychoStreamBuilder.
 /// Note: a single connection attempt is made, and if it ends (even due to an error) the function returns, the main loop will handle re-calling stream
-async fn stream(network: Network, shared_state: SharedTychoStreamState, config: EnvAPIConfig, tokens: Vec<Token>) {
+async fn stream(network: Network, cache: SharedTychoStreamState, config: EnvAPIConfig, tokens: Vec<Token>) {
     tracing::debug!("Connecting ProtocolStreamBuilder task for {} with {} tokens", network.name, tokens.len());
     let srztokens = tokens.iter().map(|t| SrzToken::from(t.clone())).collect::<Vec<_>>();
     let key = keys::stream::tokens(network.name.clone());
     shared::data::set(key.as_str(), srztokens.clone()).await;
     let builder_config = OrderbookBuilderConfig {
-        filter: ComponentFilter::with_tvl_range(filter::REMOVE_TVL_THRESHOLD, filter::ADD_TVL_THRESHOLD),
+        filter: ComponentFilter::with_tvl_range(filter::ADD_TVL_THRESHOLD, filter::ADD_TVL_THRESHOLD),
     };
     let psb = default_protocol_stream_builder(network.clone(), config.tycho_api_key.clone(), builder_config.clone(), tokens.clone()).await;
     let builder = OrderbookBuilder::new(network.clone(), psb, config.tycho_api_key.clone(), tokens.clone());
@@ -63,7 +66,7 @@ async fn stream(network: Network, shared_state: SharedTychoStreamState, config: 
                         msg.removed_pairs.len()
                     );
                     shared::data::set(keys::stream::latest(network.name.clone()).as_str(), msg.block_number).await;
-                    let mtx = shared_state.read().await;
+                    let mtx = cache.read().await;
                     let initialised = mtx.initialised;
                     drop(mtx);
                     if !initialised {
@@ -74,7 +77,7 @@ async fn stream(network: Network, shared_state: SharedTychoStreamState, config: 
                         for (_id, comp) in msg.new_pairs.iter() {
                             targets.push(comp.id.to_string().to_lowercase());
                         }
-                        let mut mtx = shared_state.write().await;
+                        let mut mtx = cache.write().await;
                         mtx.protosims = msg.states.clone();
                         mtx.components = msg.new_pairs.clone();
                         mtx.initialised = true;
@@ -105,7 +108,7 @@ async fn stream(network: Network, shared_state: SharedTychoStreamState, config: 
                         // tracing::trace!("Stream already initialised. Updating the mutex-shared state with new data, and updating Redis.");
                         let mut components_to_update = vec![];
                         if !msg.states.is_empty() {
-                            let mut mtx = shared_state.write().await;
+                            let mut mtx = cache.write().await;
                             let cpids = msg.states.keys().map(|x| x.clone().to_lowercase()).collect::<Vec<String>>();
                             for x in msg.states.iter() {
                                 mtx.protosims.insert(x.0.clone().to_lowercase(), x.1.clone());
@@ -165,8 +168,9 @@ pub type Cache = Arc<RwLock<HashMap<String, Arc<RwLock<TychoStreamState>>>>>;
 /// Stream the entire state from each AMMs, with TychoStreamBuilder.
 #[tokio::main]
 async fn main() {
-    let filter = tracing_subscriber::EnvFilter::from_default_env();
-    tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init();
+    console_subscriber::init();
+    // let filter = tracing_subscriber::EnvFilter::from_default_env();
+    // tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init();
     tracing::info!("--- --- --- Launching Tycho Orderbook (streams & API) --- --- ---");
     dotenv::from_filename(".env").ok(); // Use .env.ex for testing purposes
     let config = EnvAPIConfig::new();
@@ -206,10 +210,10 @@ async fn main() {
             tracing::debug!("Unexpected error occured. Restarting API");
         }
     });
-    tracing::debug!("Spawning stream tasks for network");
-    for network in networks {
-        let config = config.clone();
-        let states = Arc::clone(&cache);
+
+    // --- Fetch tokens for each network ---
+    let mut atks = HashMap::new();
+    for network in networks.clone() {
         let tokens = match client::tokens(&network, config.tycho_api_key.clone()).await {
             Some(t) => t,
             None => {
@@ -217,6 +221,14 @@ async fn main() {
                 continue;
             }
         };
+        atks.insert(network.name.clone(), tokens.clone());
+    }
+    tracing::debug!("Spawning stream tasks for network");
+    for network in networks {
+        let config = config.clone();
+        let states = Arc::clone(&cache);
+        let tokens = atks.get(&network.name).expect("Tokens must be present").clone();
+        tracing::info!("Tycho client built successfully for network {}", network.name);
         tokio::spawn(async move {
             loop {
                 let state = {

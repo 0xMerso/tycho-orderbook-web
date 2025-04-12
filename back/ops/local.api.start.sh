@@ -15,13 +15,14 @@ function start() {
     sleep 1
     # ------------- Execute -------------
     echo "Building ..."
-    cargo build --bin stream -q 2>/dev/null
+    export RUSTFLAGS="--cfg tokio_unstable"
+    cargo build --bin stream # -q 2>/dev/null
     echo "Build successful. Executing..."
     (
         trap - SIGINT
         # Dirty way to print all logs
-        export RUST_LOG="off,tycho_orderbook=trace,stream=trace,shared=trace"
-        cargo run --bin stream -q # 2>/dev/null
+        export RUST_LOG="off,tycho_orderbook=trace,stream=trace,shared=trace" #,tycho_client=trace" # ,tokio=trace,runtime=trace"
+        cargo run --bin stream -q                                             # 2>/dev/null
         # cargo watch -w src/ -x "run --bin stream" -q
     )
     echo "Program has finished or was interrupted. Continuing with the rest of the shell script ..."
