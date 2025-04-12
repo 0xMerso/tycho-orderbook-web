@@ -164,9 +164,9 @@ pub type Cache = Arc<RwLock<HashMap<String, Arc<RwLock<TychoStreamState>>>>>;
 /// Stream the entire state from each AMMs, with TychoStreamBuilder.
 #[tokio::main]
 async fn main() {
-    console_subscriber::init();
-    // let filter = tracing_subscriber::EnvFilter::from_default_env();
-    // tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init();
+    // console_subscriber::init();
+    let filter = tracing_subscriber::EnvFilter::from_default_env();
+    tracing_subscriber::fmt().with_max_level(Level::TRACE).with_env_filter(filter).init();
     tracing::info!("--- --- --- Launching Tycho Orderbook (streams & API) --- --- ---");
     dotenv::from_filename(".env").ok(); // Use .env.ex for testing purposes
     let config = EnvAPIConfig::new();
