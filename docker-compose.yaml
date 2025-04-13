@@ -55,7 +55,7 @@ services:
       dockerfile: ops/Dockerfile
       # Need to add RUN corepack enable && corepack prepare pnpm@latest --activate
     profiles:
-      - ui  # Only launched when the "ui" profile is active: docker-compose --profile ui up
+      - next  # Only launched when the "ui" profile is active: docker-compose --profile ui up
     ports:
       - "3000:3000"
     volumes:
