@@ -68,6 +68,7 @@ services:
       - API_HEADER_KEY=tycho-orderbook-web-api-key
       - API_HEADER_VALUE=42
       - APP_METADATA_SITE_URL=
+      - NEXT_RUNNING_IN_DOCKER=true
     depends_on:
       - stream
     restart: always
