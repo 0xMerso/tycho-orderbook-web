@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 use tracing::Level;
+use tycho_simulation::protocol::models::BlockUpdate;
 
 use futures::StreamExt;
 use shared::data::data::keys;
@@ -50,113 +51,119 @@ async fn stream(network: Network, cache: SharedTychoStreamState, config: EnvAPIC
     {
         // Use a block so that the stream is dropped at the end, just to ensure the connection is closed, but not it's necessary.
         let mut stream = stream.unwrap();
-        while let Some(msg) = stream.next().await {
-            match msg {
-                Ok(msg) => {
-                    tracing::info!(
-                        "{} '{}' stream: block # {} with {} states updates, + {} pairs, - {} pairs",
-                        network.tag.clone(),
-                        network.name.clone(),
-                        msg.block_number,
-                        msg.states.len(),
-                        msg.new_pairs.len(),
-                        msg.removed_pairs.len()
-                    );
-                    shared::data::set(keys::stream::latest(network.name.clone()).as_str(), msg.block_number).await;
-                    let mtx = cache.read().await;
-                    let initialised = mtx.initialised;
-                    drop(mtx);
-                    if !initialised {
-                        tracing::info!("First stream (= uninitialised). Writing the entire streamed data into the TychoStreamState shared struct.");
-                        shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Syncing as u128).await;
-                        // ===== Update Shared State at first sync only =====
-                        let mut targets = vec![];
-                        for (_id, comp) in msg.new_pairs.iter() {
-                            targets.push(comp.id.to_string().to_lowercase());
-                        }
-                        let mut mtx = cache.write().await;
-                        mtx.protosims = msg.states.clone();
-                        mtx.components = msg.new_pairs.clone();
-                        mtx.initialised = true;
-                        drop(mtx);
-                        let mut components = vec![];
-                        tracing::debug!("--------- States on network: {} --------- ", network.name);
-                        for m in targets.clone() {
-                            if let Some(_proto) = msg.states.get(&m.to_string()) {
-                                let comp = msg.new_pairs.get(&m.to_string()).expect("New pair not found");
-                                if comp.id.to_string().contains(filter::NULL_ADDRESS) {
-                                    tracing::debug!("Component {} has no address. Skipping.", comp.id);
-                                    continue;
-                                }
-                                components.push(SrzProtocolComponent::from(comp.clone()));
-                            }
-                        }
-                        // ===== Storing ALL components =====
-                        tracing::debug!("Storing {} components on {}", components.len(), network.name);
-                        let key = keys::stream::components(network.name.clone());
-                        shared::data::set(key.as_str(), components.clone()).await;
-                        let key = keys::stream::updated(network.name.clone());
-                        shared::data::set::<Vec<String>>(key.as_str(), vec![]).await;
-                        // ===== Set StreamState to up and running =====
-                        shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Running as u128).await;
-                        tracing::info!("✅ Proto Stream initialised successfully. StreamState set to 'Running' on {}", network.name.clone());
-                    } else {
-                        // ===== Update Shared State =====
-                        // tracing::trace!("Stream already initialised. Updating the mutex-shared state with new data, and updating Redis.");
-                        let mut components_to_update = vec![];
-                        if !msg.states.is_empty() {
-                            let mut mtx = cache.write().await;
-                            let cpids = msg.states.keys().map(|x| x.clone().to_lowercase()).collect::<Vec<String>>();
-                            for x in msg.states.iter() {
-                                mtx.protosims.insert(x.0.clone().to_lowercase(), x.1.clone());
-                                components_to_update.push(x.0.clone().to_lowercase());
-                            }
-                            let key = keys::stream::updated(network.name.clone());
-                            shared::data::set::<Vec<String>>(key.as_str(), cpids.clone()).await;
+        loop {
+            match stream.next().await {
+                Some(msg) => {
+                    match msg {
+                        Ok(msg) => {
+                            tracing::info!(
+                                "{} '{}' stream: block # {} with {} states updates, + {} pairs, - {} pairs",
+                                network.tag.clone(),
+                                network.name.clone(),
+                                msg.block_number,
+                                msg.states.len(),
+                                msg.new_pairs.len(),
+                                msg.removed_pairs.len()
+                            );
+                            shared::data::set(keys::stream::latest(network.name.clone()).as_str(), msg.block_number).await;
+                            let mtx = cache.read().await;
+                            let initialised = mtx.initialised;
                             drop(mtx);
-                        }
+                            if !initialised {
+                                tracing::info!("First stream (= uninitialised). Writing the entire streamed data into the TychoStreamState shared struct.");
+                                shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Syncing as u128).await;
+                                // ===== Update Shared State at first sync only =====
+                                let mut targets = vec![];
+                                for (_id, comp) in msg.new_pairs.iter() {
+                                    targets.push(comp.id.to_string().to_lowercase());
+                                }
+                                let mut mtx = cache.write().await;
+                                mtx.protosims = msg.states.clone();
+                                mtx.components = msg.new_pairs.clone();
+                                mtx.initialised = true;
+                                drop(mtx);
+                                let mut components = vec![];
+                                for m in targets.clone() {
+                                    if let Some(_proto) = msg.states.get(&m.to_string()) {
+                                        let comp = msg.new_pairs.get(&m.to_string()).expect("New pair not found");
+                                        if comp.id.to_string().contains(filter::NULL_ADDRESS) {
+                                            tracing::debug!("Component {} has no address. Skipping.", comp.id);
+                                            continue;
+                                        }
+                                        components.push(SrzProtocolComponent::from(comp.clone()));
+                                    }
+                                }
+                                // ===== Storing ALL components =====
+                                tracing::debug!("Storing {} components on {}", components.len(), network.name);
+                                let key = keys::stream::components(network.name.clone());
+                                shared::data::set(key.as_str(), components.clone()).await;
+                                let key = keys::stream::updated(network.name.clone());
+                                shared::data::set::<Vec<String>>(key.as_str(), vec![]).await;
+                                // ===== Set StreamState to up and running =====
+                                shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Running as u128).await;
+                                tracing::info!("✅ Proto Stream initialised successfully. StreamState set to 'Running' on {}", network.name.clone());
+                            } else {
+                                // ===== Update Shared State =====
+                                // tracing::trace!("Stream already initialised. Updating the mutex-shared state with new data, and updating Redis.");
+                                let mut components_to_update = vec![];
+                                if !msg.states.is_empty() {
+                                    let mut mtx = cache.write().await;
+                                    let cpids = msg.states.keys().map(|x| x.clone().to_lowercase()).collect::<Vec<String>>();
+                                    for x in msg.states.iter() {
+                                        mtx.protosims.insert(x.0.clone().to_lowercase(), x.1.clone());
+                                        components_to_update.push(x.0.clone().to_lowercase());
+                                    }
+                                    let key = keys::stream::updated(network.name.clone());
+                                    shared::data::set::<Vec<String>>(key.as_str(), cpids.clone()).await;
+                                    drop(mtx);
+                                }
 
-                        if !components_to_update.is_empty() || !msg.new_pairs.is_empty() || !msg.removed_pairs.is_empty() {
-                            match getters::components(network.clone()).await {
-                                Some(mut components) => {
-                                    let timestamp = current_timestamp();
-                                    for x in components_to_update.iter() {
-                                        if let Some(pos) = components.iter().position(|current| current.id.to_string().to_lowercase() == x.to_string().to_lowercase()) {
-                                            components[pos].last_updated_at = timestamp;
+                                if !components_to_update.is_empty() || !msg.new_pairs.is_empty() || !msg.removed_pairs.is_empty() {
+                                    match getters::components(network.clone()).await {
+                                        Some(mut components) => {
+                                            let timestamp = current_timestamp();
+                                            for x in components_to_update.iter() {
+                                                if let Some(pos) = components.iter().position(|current| current.id.to_string().to_lowercase() == x.to_string().to_lowercase()) {
+                                                    components[pos].last_updated_at = timestamp;
+                                                }
+                                            }
+                                            for x in msg.new_pairs.iter() {
+                                                let pc = SrzProtocolComponent::from(x.1.clone());
+                                                if let Some(pos) = components.iter().position(|current| current.id.to_string().to_lowercase() == x.0.to_string().to_lowercase()) {
+                                                    components[pos] = pc;
+                                                } else {
+                                                    components.push(pc);
+                                                }
+                                            }
+                                            for x in msg.removed_pairs.iter() {
+                                                if let Some(pos) = components.iter().position(|current| current.id.to_string().to_lowercase() == x.0.to_string().to_lowercase()) {
+                                                    components.swap_remove(pos);
+                                                }
+                                            }
+                                            let key = keys::stream::components(network.name.clone());
+                                            shared::data::set(key.as_str(), components.clone()).await;
+                                        }
+                                        None => {
+                                            tracing::error!("Failed to get components. Exiting.");
                                         }
                                     }
-                                    for x in msg.new_pairs.iter() {
-                                        let pc = SrzProtocolComponent::from(x.1.clone());
-                                        if let Some(pos) = components.iter().position(|current| current.id.to_string().to_lowercase() == x.0.to_string().to_lowercase()) {
-                                            components[pos] = pc;
-                                        } else {
-                                            components.push(pc);
-                                        }
-                                    }
-                                    for x in msg.removed_pairs.iter() {
-                                        if let Some(pos) = components.iter().position(|current| current.id.to_string().to_lowercase() == x.0.to_string().to_lowercase()) {
-                                            components.swap_remove(pos);
-                                        }
-                                    }
-                                    let key = keys::stream::components(network.name.clone());
-                                    shared::data::set(key.as_str(), components.clone()).await;
                                 }
-                                None => {
-                                    tracing::error!("Failed to get components. Exiting.");
-                                }
+                                shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Running as u128).await;
                             }
                         }
-                        shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Running as u128).await;
-                    }
+                        Err(e) => {
+                            tracing::warn!("Error receiving BlockUpdate from stream on {}: {:?}.", network.name, e);
+                            shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
+                            // break;
+                        }
+                    };
                 }
-                Err(e) => {
-                    tracing::warn!("Error receiving BlockUpdate from stream on {}: {:?}.", network.name, e);
+                None => {
+                    tracing::warn!("Stream ended on network {}. Exiting stream session.", network.name);
                     shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
                 }
             };
         }
-        // At this point the stream object goes out of scope and is dropped, ensuring that the connection is closed
-        tracing::warn!("Stream ended on network {}. Exiting stream session.", network.name);
     }
 }
 
@@ -183,8 +190,10 @@ async fn main() {
     }
     // --- Heartbeat ---
     shared::helpers::hearbeats(networks.clone(), config.clone()).await;
+
     // --- Create a cache for the shared state, this is the key to share the state between streams and API tasks ---
     let cache: Arc<RwLock<HashMap<String, SharedTychoStreamState>>> = Arc::new(RwLock::new(HashMap::new()));
+
     // --- Initialize state for each network ---
     for net in &networks {
         cache.write().await.insert(
@@ -199,14 +208,6 @@ async fn main() {
     let readable = Arc::clone(&cache);
     let dupc = config.clone();
     let dupnets = networks.clone();
-    // --- Spawn the Axum server, one for all networks ---
-    tokio::spawn(async move {
-        loop {
-            tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await; // Wait streams init
-            axum::start(dupnets.clone(), Arc::clone(&readable), dupc.clone()).await;
-            tracing::debug!("Unexpected error occured. Restarting API");
-        }
-    });
 
     // --- Fetch tokens for each network ---
     let mut atks = HashMap::new();
@@ -247,7 +248,8 @@ async fn main() {
             }
         });
     }
-    // --- Keep the program running ---
-    futures::future::pending::<()>().await;
-    tracing::debug!("Stream program terminated");
+
+    // --- Spawn the Axum server ---
+    tokio::time::sleep(tokio::time::Duration::from_millis(2500)).await; // Wait streams init
+    axum::start(dupnets.clone(), Arc::clone(&readable), dupc.clone()).await;
 }
