@@ -243,8 +243,9 @@ async fn main() {
                         tracing::error!("Stream for {} panicked: {:?}. Restarting...", network.name, e);
                     }
                 }
-                tracing::debug!("Waiting {} seconds before restarting stream for {}", RESTART_STREAM_DELAY, network.name);
-                tokio::time::sleep(tokio::time::Duration::from_secs(RESTART_STREAM_DELAY)).await;
+                let delay = if config.testing { 5 } else { RESTART_STREAM_DELAY };
+                tracing::debug!("Waiting {} seconds before restarting stream for {}", delay, network.name);
+                tokio::time::sleep(tokio::time::Duration::from_secs(delay)).await;
             }
         });
     }
