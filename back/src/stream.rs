@@ -152,15 +152,16 @@ async fn stream(network: Network, cache: SharedTychoStreamState, config: EnvAPIC
                             }
                         }
                         Err(e) => {
-                            tracing::warn!("Error receiving BlockUpdate from stream on {}: {:?}.", network.name, e);
+                            tracing::warn!("Error receiving BlockUpdate from stream on {}: {:?}.", network.name, e.to_string());
                             shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
                             // break;
                         }
                     };
                 }
                 None => {
-                    tracing::warn!("Stream ended on network {}. Exiting stream session.", network.name);
-                    shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
+                    // .. Nothing to do
+                    // tracing::warn!("Stream ended on network {}. Exiting stream session.", network.name);
+                    // shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
                 }
             };
         }
