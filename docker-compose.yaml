@@ -7,11 +7,11 @@ services:
     image: redis:latest
     restart: always
     ports:
-      - "7777:7777"
+      - "42777:42777"
     environment:
       - BUILD_TYPE=debug
       - REDIS_HOST=redis
-      - REDIS_PORT=7777
+      - REDIS_PORT=42777
       - REDIS_ARGS="--loglevel verbose"
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
@@ -29,7 +29,7 @@ services:
       dockerfile: back/ops/Dockerfile
       args:
         - PROGRAM=stream
-        - BUILD_TYPE=debug
+        - BUILD_TYPE=release # debug
     ports:
       - "42042:42042"
     volumes:

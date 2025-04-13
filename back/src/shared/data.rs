@@ -82,7 +82,7 @@ pub async fn connect() -> Result<MultiplexedConnection, RedisError> {
     let endpoint = std::env::var("REDIS_HOST");
     let endpoint = match endpoint {
         Ok(endpoint) => endpoint,
-        Err(_) => "127.0.0.1:7777".to_string(),
+        Err(_) => "127.0.0.1:42777".to_string(),
     };
     let endpoint = format!("redis://{}", endpoint);
     // log::info!("Redis endpoint: {}", endpoint);
