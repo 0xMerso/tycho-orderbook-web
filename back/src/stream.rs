@@ -154,14 +154,13 @@ async fn stream(network: Network, cache: SharedTychoStreamState, config: EnvAPIC
                         Err(e) => {
                             tracing::warn!("Error receiving BlockUpdate from stream on {}: {:?}.", network.name, e.to_string());
                             shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
-                            // break;
+                            break;
                         }
                     };
                 }
                 None => {
-                    // .. Nothing to do
-                    // tracing::warn!("Stream ended on network {}. Exiting stream session.", network.name);
-                    // shared::data::set(keys::stream::status(network.name.clone()).as_str(), StreamState::Error as u128).await;
+                    tracing::warn!("Stream ended on network {}. Exiting stream session.", network.name);
+                    break;
                 }
             };
         }
@@ -230,11 +229,11 @@ async fn main() {
         tracing::info!("Tycho client built successfully for network {}", network.name);
         tokio::spawn(async move {
             loop {
+                tracing::debug!("Launching stream for network {}", network.name);
                 let state = {
                     let map = states.read().await;
                     map.get(&network.name).expect("State must be present").clone()
                 };
-                tracing::debug!("Launching stream for network {}", network.name);
                 let streaming = AssertUnwindSafe(stream(network.clone(), state, config.clone(), tokens.clone())).catch_unwind().await;
                 match streaming {
                     Ok(_) => {
