@@ -10,6 +10,5 @@ git pull origin main
 cd ../front
 git pull origin main
 cd ..
-
 docker compose stop
 docker compose up --build -d

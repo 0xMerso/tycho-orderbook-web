@@ -10,25 +10,17 @@
 echo "Getting submodules ..."
 git pull --recurse-submodules
 git submodule update --remote --recursive
-# git submodule update --init --recursive
-
 # Create dedicated network used in docker compose
 echo "Creating docker network 'tycho' ..."
 docker network create tycho
-
 # Verify Docker Compose
 docker compose config
-
 # Run
 docker compose up --build -d
-# echo "Compose  built. Following logs ..."
-# docker compose logs -f
 
 # ------------------ Utils ---------------------
-
 # To stop the compose, you can use the following command
 # docker compose down
-
 # To remove the submodules
 # git submodule deinit -f path/to/submodule && git rm -f path/to/submodule && rm -rf .git/modules/path/to/submodule
 # export submodule=front
