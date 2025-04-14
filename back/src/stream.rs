@@ -29,6 +29,7 @@ pub mod axum;
 
 /// Stream the entire state from each AMMs, with TychoStreamBuilder.
 /// Note: a single connection attempt is made, and if it ends (even due to an error) the function returns, the main loop will handle re-calling stream
+/// Other code example: https://github.com/dewiz-xyz/tycho-simulation-ts/blob/master/src/lib.rs
 async fn stream(network: Network, cache: SharedTychoStreamState, config: EnvAPIConfig, tokens: Vec<Token>) {
     tracing::debug!("Connecting ProtocolStreamBuilder task for {} with {} tokens", network.name, tokens.len());
     let srztokens = tokens.iter().map(|t| SrzToken::from(t.clone())).collect::<Vec<_>>();
@@ -242,7 +243,7 @@ async fn main() {
                         tracing::error!("Stream for {} panicked: {:?}. Restarting...", network.name, e);
                     }
                 }
-                let delay = if config.testing { 5 } else { RESTART_STREAM_DELAY };
+                let delay = if config.testing { RESTART_STREAM_DELAY / 10 } else { RESTART_STREAM_DELAY };
                 tracing::debug!("Waiting {} seconds before restarting stream for {}", delay, network.name);
                 tokio::time::sleep(tokio::time::Duration::from_secs(delay)).await;
             }

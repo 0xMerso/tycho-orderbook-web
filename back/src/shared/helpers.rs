@@ -76,18 +76,18 @@ pub async fn prevalidation(network: Network, headers: HeaderMap, initialised: bo
         return Some(msg.to_string());
     }
     // Check if the API is running
+    // @dev Tmp => No error return, we keep answering requests with degraded stream synchronization, at worse data is a little outdated
     match getters::status(network.clone()).await {
         Some(status) => {
             if status.stream != StreamState::Running as u128 {
                 let msg = format!("API is not yet running: got {:?} vs {:?}", status.stream, StreamState::Running);
                 tracing::error!("{}", msg);
-                return Some(msg);
+                // return Some(msg.to_string());
             }
         }
         _ => {
             let msg = "Failed to get API status";
             tracing::error!("{}", msg);
-            // No error return, we keep answering requests with degraded stream synchronization, at worse data is a little outdated
             // return Some(msg.to_string());
         }
     }
@@ -163,7 +163,7 @@ pub async fn alive(endpoint: String) -> bool {
     let client = reqwest::Client::new();
     match client.get(endpoint.clone()).send().await {
         Ok(res) => {
-            tracing::debug!("Hearbeat Success for {}: {}", endpoint.clone(), res.status());
+            tracing::debug!("Hearbeat Success: {}", res.status());
             true
         }
         Err(e) => {
@@ -194,7 +194,7 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
                         let latest_remote = get_latest_block(network.rpc.clone()).await;
                         let latest_local = data.latest.parse::<u64>().unwrap_or_default();
                         let delta = latest_remote - latest_local;
-                        let is_delta_valid = delta < 25u64; // Max 25 blocks, not relevant due to block time variation between chains, to be improved
+                        let is_delta_valid = delta < 50u64; // Max 25 blocks, not relevant due to block time variation between chains, to be improved
                         if is_delta_valid && latest_local > 0u64 && data.stream == StreamState::Running as u128 {
                             match config.heartbeats.get(x) {
                                 Some(endpoint) => {
