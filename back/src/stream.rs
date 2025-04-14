@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 use tracing::Level;
-use tycho_simulation::protocol::models::BlockUpdate;
 
 use futures::StreamExt;
 use shared::data::data::keys;

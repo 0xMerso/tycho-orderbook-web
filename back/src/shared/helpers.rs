@@ -184,7 +184,7 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
         tracing::info!("Spawning heartbeat task.");
     }
     tokio::spawn(async move {
-        let mut hb = tokio::time::interval(Duration::from_secs(HEARTBEAT_DELAY));
+        let mut hb = tokio::time::interval(Duration::from_secs(HEARTBEAT_DELAY / 2));
         loop {
             hb.tick().await;
             tracing::debug!("Heartbeat tick");
