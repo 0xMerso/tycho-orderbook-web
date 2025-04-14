@@ -68,7 +68,7 @@ pub fn validate_headers(headers: &HeaderMap, expected: String) -> (bool, String)
 
 /// Prevalidation of the API
 /// Check if the API stream is initialised and running, and if the API key is valid
-pub async fn prevalidation(network: Network, headers: HeaderMap, initialised: bool, expected_api_key: String) -> Option<String> {
+pub async fn prevalidation(network: Network, headers: HeaderMap, initialised: bool, key: String) -> Option<String> {
     // Check if the API stream is initialised
     if !initialised {
         let msg = "API is not yet initialised";
@@ -87,11 +87,12 @@ pub async fn prevalidation(network: Network, headers: HeaderMap, initialised: bo
         _ => {
             let msg = "Failed to get API status";
             tracing::error!("{}", msg);
-            return Some(msg.to_string());
+            // No error return, we keep answering requests with degraded stream synchronization, at worse data is a little outdated
+            // return Some(msg.to_string());
         }
     }
     // Check if the API key is valid
-    let (allowed, msg) = validate_headers(&headers, expected_api_key);
+    let (allowed, msg) = validate_headers(&headers, key);
     if !allowed {
         tracing::error!("{}", msg);
         return Some(msg.to_string());
