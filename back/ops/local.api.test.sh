@@ -25,6 +25,9 @@ elif [ "$network" = "base" ]; then
     export wbtc="0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf"
     export dai="0x50c5725949a6f0c72e6c4a641f24049a917db0cb"
     export usdt="0xfde4c96c8593536e31f229ea8f37b2ada2699bb2"
+elif [ "$network" = "unichain" ]; then
+    export eth="0x4200000000000000000000000000000000000006"
+    export usdc="0x078D782b760474a361dDA0AF3839290b0EF57AD6"
 else
     echo "Invalid network: $network"
     exit 1
@@ -94,7 +97,7 @@ try "GET /$network/components" "$API_URL/$network/components"
 try "GET /$network/pairs" "$API_URL/$network/pairs"
 
 # Test simulations
-# try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'"}'
+try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'"}'
 # try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$wbtc"'"}'
 # try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$dai"'"}'
 # try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdt"'"}'
@@ -104,8 +107,8 @@ try "GET /$network/pairs" "$API_URL/$network/pairs"
 # try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$wbtc-$dai"'"}'
 # try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$wbtc-$usdt"'"}'
 
-# try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$eth"'", "amount": 100}}'
-# try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$usdc"'", "amount": 1000}}'
+try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$eth"'", "amount": 100}}'
+try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'", "point": {"input": "'"$usdc"'", "amount": 1000}}'
 # try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$wbtc"'", "point": {"input": "'"$eth"'", "amount": 100}}'
 # try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$dai"'", "point": {"input": "'"$eth"'", "amount": 1000}}'
 # try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdt"'", "point": {"input": "'"$eth"'", "amount": 100}}'
