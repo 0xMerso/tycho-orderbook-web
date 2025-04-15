@@ -63,7 +63,7 @@ impl EnvAPIConfig {
     /// Create a new EnvAPIConfig
     pub fn new() -> Self {
         let networks: Vec<String> = get("NETWORKS").to_lowercase().split(",").map(|s| s.to_string()).collect();
-        let heartbeats: Vec<String> = get("HEARTBEATS").to_string().split(",").map(|s| s.to_string()).collect();
+        let heartbeats: Vec<String> = get("HEARTBEATS").split(",").map(|s| s.to_string()).collect();
         EnvAPIConfig {
             networks: networks.clone(),
             heartbeats: heartbeats.clone(),

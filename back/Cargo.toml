@@ -3,10 +3,16 @@ name = "back"
 version = "0.1.0"
 edition = "2021"
 
+description = "Rust Axum API used to transpose onchain liquidity from AMMs into a orderbook with Tycho"
+license = "MIT" 
+readme = "README.md"
+keywords = [ "dex", "mev", "blockchain", "ethereum", "orderbook", "tycho", "defi", "amm", "cex", "binance", "liquidity", "swap", "crypto", "solver"]
+categories = ["finance", "cryptography::cryptocurrencies"]
+authors = ["Merso merso.eth@gmail.com"] 
+documentation = "https://tycho-orderbook.gitbook.io/docs"
 
 [dependencies]
-
-tycho-orderbook = { path = "../sdk" } # Default, expected when launch with Docker Compose
+tycho-orderbook = { version = "0.1.0", path = "../sdk" } # Default, expected when launch with Docker Compose
 # tycho-orderbook = { path = "../../tycho-orderbook-sdk" } # Adjust according to where you clone the sdk repo
 tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "662c37fd2cc7cff65407e3534584860aab184d69" }
 
@@ -19,7 +25,6 @@ num-bigint = "0.4.6"
 tokio = { version = "1.28", features = ["full", "tracing"] }
 toml = "0.8.12"
 serde = { version = "1.0.104", features = ["derive"] }
-clippy = "0.0.302"
 env_logger = "0.11.3"
 eyre = "0.6.11"
 url = "2.5.0"

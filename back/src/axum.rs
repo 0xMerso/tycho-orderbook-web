@@ -10,7 +10,7 @@ use axum::response::IntoResponse;
 use http::HeaderValue;
 use serde_json::json;
 use shared::{
-    data::data::keys,
+    data::keys,
     getters,
     helpers::{prevalidation, validate_headers},
     types::{APIResponse, EnvAPIConfig, PairTag, Status, Version},

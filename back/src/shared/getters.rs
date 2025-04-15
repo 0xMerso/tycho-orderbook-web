@@ -4,7 +4,7 @@ use tycho_orderbook::{
 };
 
 use crate::{
-    data::data::keys,
+    data::keys,
     types::{PairTag, Status},
 };
 

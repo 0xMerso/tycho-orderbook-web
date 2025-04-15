@@ -8,9 +8,9 @@ use tycho_orderbook::{
 };
 
 use crate::{
-    data::data::keys,
+    data::keys,
     getters,
-    misc::r#static::{CACHE_OB_DURATION, HEADER_TYCHO_API_KEY, HEARTBEAT_DELAY},
+    misc::r#static::{HEADER_TYCHO_API_KEY, HEARTBEAT_DELAY},
     types::{EnvAPIConfig, PairTag, StreamState},
 };
 
@@ -25,8 +25,8 @@ pub async fn verify_obcache(network: Network, acps: Vec<SrzProtocolComponent>, t
             let pools = orderbook.pools.clone();
             for previous in pools {
                 if let Some(current) = acps.iter().find(|x| x.id.to_lowercase() == previous.id.to_lowercase()) {
-                    let delta = current.last_updated_at as i64 - previous.last_updated_at as i64;
-                    if delta > CACHE_OB_DURATION {
+                    let delta = (current.last_updated_at as i64 - previous.last_updated_at as i64) * 1000;
+                    if delta > network.block_time_ms as i64 {
                         // Could be > 1m or 5m to save resources
                         tracing::debug!("Cp {} outdated (new: {} vs old: {} = delta {})", current.id, current.last_updated_at, previous.last_updated_at, delta);
                         return None;

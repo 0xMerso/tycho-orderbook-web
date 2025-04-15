@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tracing::Level;
 
 use futures::StreamExt;
-use shared::data::data::keys;
+use shared::data::keys;
 use shared::getters;
 use shared::misc::r#static::RESTART_STREAM_DELAY;
 use shared::types::EnvAPIConfig;

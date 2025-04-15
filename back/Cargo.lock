@@ -2291,7 +2291,6 @@ dependencies = [
  "axum-macros",
  "bytes",
  "chrono",
- "clippy",
  "colored 2.2.0",
  "console-subscriber",
  "dotenv",
@@ -10155,7 +10154,3 @@ dependencies = [
  "once_cell",
  "simd-adler32",
 ]
-
-[[patch.unused]]
-name = "tycho-orderbook"
-version = "0.1.0"

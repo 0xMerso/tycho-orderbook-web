@@ -2,3 +2,4 @@ target
 .env
 .env.prod
 dump.rdb
+errors
