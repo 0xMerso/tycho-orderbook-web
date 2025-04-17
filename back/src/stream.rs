@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::panic::AssertUnwindSafe;
 use std::sync::Arc;
 use tracing::Level;
+use tycho_orderbook::data::fmt::SrzToken;
 
 use futures::StreamExt;
 use shared::data::keys;
@@ -12,18 +13,14 @@ use shared::types::EnvAPIConfig;
 use shared::types::StreamState;
 use tokio::sync::RwLock;
 use tycho_orderbook::builder::OrderbookBuilder;
-use tycho_orderbook::builder::OrderbookBuilderConfig;
 use tycho_orderbook::core::client;
-use tycho_orderbook::core::helper::default_protocol_stream_builder;
 use tycho_orderbook::data::fmt::SrzProtocolComponent;
-use tycho_orderbook::data::fmt::SrzToken;
 use tycho_orderbook::types::Network;
 use tycho_orderbook::types::SharedTychoStreamState;
 use tycho_orderbook::types::TychoStreamState;
 use tycho_orderbook::utils::misc::current_timestamp;
 use tycho_orderbook::utils::r#static::filter;
 use tycho_simulation::models::Token;
-use tycho_simulation::tycho_client::feed::component_tracker::ComponentFilter;
 
 pub mod axum;
 
@@ -35,12 +32,8 @@ async fn stream(network: Network, cache: SharedTychoStreamState, config: EnvAPIC
     let srztokens = tokens.iter().map(|t| SrzToken::from(t.clone())).collect::<Vec<_>>();
     let key = keys::stream::tokens(network.name.clone());
     shared::data::set(key.as_str(), srztokens.clone()).await;
-    let builder_config = OrderbookBuilderConfig {
-        filter: ComponentFilter::with_tvl_range(filter::ADD_TVL_THRESHOLD, filter::ADD_TVL_THRESHOLD),
-    };
-    let psb = default_protocol_stream_builder(network.clone(), config.tycho_api_key.clone(), builder_config.clone(), tokens.clone()).await;
-    let builder = OrderbookBuilder::new(network.clone(), psb, config.tycho_api_key.clone(), tokens.clone());
-    let stream = builder.psb.build().await;
+    let obb = OrderbookBuilder::new(network.clone(), None, config.tycho_api_key.clone(), tokens.clone()).await;
+    let stream = obb.psb.build().await;
     if stream.is_err() {
         let err = stream.err().unwrap();
         tracing::warn!("Failed to build stream on {}: {:?}. Exiting.", network.name, err.to_string());
