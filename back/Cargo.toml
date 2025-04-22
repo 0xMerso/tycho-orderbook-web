@@ -12,9 +12,9 @@ authors = ["Merso merso.eth@gmail.com"]
 documentation = "https://tycho-orderbook.gitbook.io/docs"
 
 [dependencies]
-tycho-orderbook = { version = "0.1.0", path = "../sdk" } # Default, expected when launch with Docker Compose
-# tycho-orderbook = { path = "../../tycho-orderbook-sdk" } # Adjust according to where you clone the sdk repo
-tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "662c37fd2cc7cff65407e3534584860aab184d69" }
+# tycho-orderbook = { version = "0.1.0", path = "../sdk" } # Default, expected when launch with Docker Compose
+tycho-orderbook = { path = "../../tycho-orderbook-sdk" } # Adjust according to where you clone the sdk repo
+tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.git", rev = "2ef64b9bcc20de865303efceb3a5d245c34b32c0" }
 
 utoipa = "5.3.1"
 utoipa-axum = "0.2.0"
