@@ -10,6 +10,9 @@
 echo "Getting submodules ..."
 git pull --recurse-submodules
 git submodule update --remote --recursive
+
+cp -n back/.env.ex back/.env # Duplicate .env.ex to .env, if not already existing (.env is gitignored)
+
 # Create dedicated network used in docker compose
 echo "Creating docker network 'tycho' ..."
 docker network create tycho
