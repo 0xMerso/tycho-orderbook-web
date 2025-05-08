@@ -43,8 +43,5 @@ start
 # --- Tycho System Status ---
 # https://grafana.propellerheads.xyz/public-dashboards/518dd877a470434383caf9fc5845652e?orgId=1&refresh=5s
 
-# --- Website (limited orderbooks) ---
-# https://tycho-orderbook.vercel.app
-
 # --- Cleanup ---
 # cargo clippy --fix --allow-dirty --allow-staged --workspace --all-targets --all-features

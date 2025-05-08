@@ -194,7 +194,7 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
                         let latest_remote = get_latest_block(network.rpc.clone()).await;
                         let latest_local = data.latest.parse::<u64>().unwrap_or_default();
                         let delta = latest_remote - latest_local;
-                        let is_delta_valid = delta < 50u64; // Max 25 blocks, not relevant due to block time variation between chains, to be improved
+                        let is_delta_valid = delta < 100u64; // Max 25 blocks, not relevant due to block time variation between chains, to be improved
                         if is_delta_valid && latest_local > 0u64 && data.stream == StreamState::Running as u128 {
                             match config.heartbeats.get(x) {
                                 Some(endpoint) => {
