@@ -211,9 +211,10 @@ pub async fn hearbeats(networks: Vec<Network>, config: EnvAPIConfig) {
                             }
                         } else {
                             tracing::error!(
-                                "Heartbeat Error: Network {}: is_delta_valid: {}, latest = {}, StreamState = {}",
+                                "Heartbeat Error: Network {}: is_delta_valid: {} (delta = {}), latest = {}, StreamState = {}",
                                 network.name,
                                 is_delta_valid,
+                                delta,
                                 latest_local,
                                 data.stream
                             );
