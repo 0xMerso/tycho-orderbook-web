@@ -98,12 +98,12 @@ try "GET /$network/pairs" "$API_URL/$network/pairs"
 
 # Test simulations
 try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdc"'"}'
-try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$wbtc"'"}'
-try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$dai"'"}'
+# try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$wbtc"'"}'
+# try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$dai"'"}'
 # try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdt"'"}'
 # try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$usdc-$wbtc"'"}'
-# try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$usdc-$dai"'"}'
-# try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$usdc-$usdt"'"}'
+try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$usdc-$dai"'"}'
+try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$usdc-$usdt"'"}'
 # try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$wbtc-$dai"'"}'
 # try "POST /$network/orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$wbtc-$usdt"'"}'
 
