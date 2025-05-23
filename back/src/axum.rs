@@ -173,7 +173,10 @@ async fn tokens(headers: HeaderMap, Extension(network): Extension<Network>, Exte
         return wrap(None, Some(msg));
     }
     match getters::tokens(network.clone()).await {
-        Some(tokens) => wrap(Some(tokens), None),
+        Some(tokens) => {
+            tracing::debug!("Returning {} tokens", tokens.len());
+            wrap(Some(tokens), None)
+        }
         _ => wrap(None, Some("Failed to get tokens".to_string())),
     }
 }
@@ -198,7 +201,10 @@ async fn pairs(headers: HeaderMap, Extension(network): Extension<Network>, Exten
         return wrap(None, Some(msg));
     }
     match getters::pairs(network).await {
-        Some(pairs) => wrap(Some(pairs), None),
+        Some(pairs) => {
+            tracing::debug!("Returning {} pairs", pairs.len());
+            wrap(Some(pairs), None)
+        }
         _ => {
             let msg = "Failed to generate pair tags";
             wrap(None, Some(msg.to_string()))

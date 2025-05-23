@@ -36,7 +36,7 @@ fi
 # export LOG=true ; export API_HOST="https://tycho.merso.xyz" ; sh ops/local.api.test.sh ethereum
 
 API_HOST=${API_HOST:-"http://127.0.0.1:42042"}
-LOG=${LOG:-false}
+LOG=${LOG:-true}
 API_URL="$API_HOST/api"
 echo "Testing API at $API_URL"
 
@@ -120,3 +120,5 @@ try "POST /$network/orderbook (with point)" "$API_URL/$network/orderbook" '{"tag
 
 # usdp="0x8e870d67f660d95d5be530380d0ec0bd388289e1" # Trying when no orderbook available
 # try "POST /orderbook (simple)" "$API_URL/$network/orderbook" '{"tag": "'"$eth-$usdp"'"}'
+
+# LOG=true && API_HOST=https://tycho-dev-orderbook.propellerheads.xyz sh ops/local.api.test.sh ethereum
