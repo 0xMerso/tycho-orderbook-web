@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - INFRA-138
   workflow_dispatch:
     inputs:
       branch:
@@ -134,3 +133,16 @@ jobs:
           role-to-assume: "${{ secrets.role_to_assume }}"
           audience: sts.amazonaws.com
           aws-region: "${{ secrets.aws_region }}"
+
+      - name: Setup kubeconfig
+        run: aws eks update-kubeconfig --name "${{ secrets.eks_cluster_name }}" --region "${{ secrets.aws_region }}"
+
+      - name: Upgrade or Install helm release
+        run: |
+          helm upgrade --install -n "${{ secrets.eks_namespace }}" tycho-orderbook-stream .helm/tycho-orderbook-stream \
+            -f .helm/tycho-orderbook-stream/values.yaml \
+            --set image.repository=${{ secrets.repository_url }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ github.sha }} \
+            --set externalSecrets.data=${{ secrets.external_secret_data }} \
+            --set externalSecrets.secretstore=${{ secrets.external_secret_secretstore }} \
+            --set 'ingress.hosts[0].host'=${{ secrets.host_url }}
