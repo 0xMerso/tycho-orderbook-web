@@ -8,9 +8,11 @@ RUN apt-get update && \
 # Set a workspace directory
 WORKDIR /workspace
 RUN echo $(ls -la /tmp/x)
+
 # Copy local projects into container maintaining the relative structure
 COPY back ./back
 COPY sdk ./sdk
+
 # Optional: Print directory and file details for debugging
 # RUN ls -la /workspace && \
 #     ls -la /workspace/sdk && \
@@ -36,3 +38,5 @@ RUN if [ "$BUILD_TYPE" = "release" ]; then \
     fi
 # Set entrypoint to run the built binary
 CMD [ "bash", "-c", "if [ \"$BUILD_TYPE\" = \"release\" ]; then exec ./target/release/$PROGRAM; else exec ./target/debug/$PROGRAM; fi" ]
+
+

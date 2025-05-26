@@ -18,7 +18,8 @@ tycho-simulation = { git = "https://github.com/propeller-heads/tycho-simulation.
 
 utoipa = "5.3.1"
 utoipa-axum = "0.2.0"
-utoipa-swagger-ui = { version = "9", features = ["axum"] }
+# utoipa-swagger-ui = { version = "9", features = ["axum"] }
+utoipa-swagger-ui = { version = "9", features = ["axum", "reqwest"] }
 chrono = "0.4.23"
 futures = "0.3.31"
 num-bigint = "0.4.6"
