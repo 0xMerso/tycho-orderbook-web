@@ -9229,6 +9229,7 @@ dependencies = [
  "base64 0.22.1",
  "mime_guess",
  "regex",
+ "reqwest 0.12.15",
  "rust-embed",
  "serde",
  "serde_json",
