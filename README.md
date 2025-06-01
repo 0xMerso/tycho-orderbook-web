@@ -16,8 +16,12 @@ You will need to install Rust, Node, Redis.
 
 ```bash
 git clone --recurse-submodules https://github.com/0xMerso/tycho-orderbook-web web
+cd web
 git submodule update --remote --recursive # Update the submodules to the latest version.
+```
 
+```bash
+# Run the backend server
 cp -n back/.env.ex back/.env # Duplicate .env.ex to .env, if not already existing (.env is gitignored)
 cd back
 # Launch 'ethereum' Axum API + Redis. You can use 'base' instead
@@ -27,6 +31,7 @@ sh ops/local.api.test.sh ethereum
 ```
 
 ```bash
+# Run the frontend
 cd front/front
 pnpm install
 pnpm dev
