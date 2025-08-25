@@ -174,6 +174,8 @@ async fn main() {
     let commit = shared::helpers::commit();
     tracing::info!("Launching Tycho streams on {:?} | 🧪 Testing mode: {:?} | Commit: {:?}", config.networks, config.testing, commit);
     let networks = tycho_orderbook::utils::r#static::networks();
+    // Removing Base network for now
+    let networks = networks.into_iter().filter(|x| x.name != "base").collect::<Vec<Network>>();
     let targets = config.networks.clone();
     let networks = networks.into_iter().filter(|x| targets.contains(&x.name.to_lowercase())).collect::<Vec<Network>>();
     shared::data::ping().await;
