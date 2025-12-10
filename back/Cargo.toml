@@ -56,7 +56,9 @@ tracing-subscriber = "0.3"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 console-subscriber = "0.4.1"
 
-# Misc to trigger redeploy
+# Patch to fix svm-rs-builds duplicate SOLC_VERSION_0_8_31 definition bug
+[patch.crates-io]
+svm-rs-builds = { git = "https://github.com/alloy-rs/svm-rs", rev = "99fe67b6" }
 
 # ======================================================================================================================================================================================================
 
